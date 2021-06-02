@@ -4,17 +4,18 @@
   <meta charset="utf-8">
   
   
-  <title>Hexo</title>
+  <title>YzRuntime&#39;s blog</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta property="og:type" content="website">
-<meta property="og:title" content="Hexo">
+<meta property="og:title" content="YzRuntime&#39;s blog">
 <meta property="og:url" content="http://example.com/index.html">
-<meta property="og:site_name" content="Hexo">
+<meta property="og:site_name" content="YzRuntime&#39;s blog">
 <meta property="og:locale" content="en_US">
-<meta property="article:author" content="John Doe">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="Big data">
 <meta name="twitter:card" content="summary">
   
-    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+    <link rel="alternate" href="/atom.xml" title="YzRuntime's blog" type="application/atom+xml">
   
   
     <link rel="shortcut icon" href="/favicon.png">
@@ -42,7 +43,7 @@
   <div id="header-outer" class="outer">
     <div id="header-title" class="inner">
       <h1 id="logo-wrap">
-        <a href="/" id="logo">Hexo</a>
+        <a href="/" id="logo">YzRuntime&#39;s blog</a>
       </h1>
       
     </div>
@@ -71,24 +72,106 @@
       <div class="outer">
         <section id="main">
   
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Jerry a5076969c25b4ac19c8205b93517fb65" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-How to use Window in Spark" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Jerry%20a5076969c25b4ac19c8205b93517fb65/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.078Z" itemprop="datePublished">2021-05-30</time>
+    <a href="/2021/06/02/How%20to%20use%20Window%20in%20Spark/" class="article-date">
+  <time class="dt-published" datetime="2021-06-02T10:53:54.000Z" itemprop="datePublished">2021-06-02</time>
 </a>
     
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2021/06/02/How%20to%20use%20Window%20in%20Spark/">How to use Window in Spark</a>
+    </h1>
+  
+
+      </header>
+    
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="Jerry"><a href="#Jerry" class="headerlink" title="Jerry"></a>Jerry</h1><p>active_timestamp: 8<br>os: windows</p>
+        <h1 id="Background"><a href="#Background" class="headerlink" title="Background"></a>Background</h1><p>When we use groupBy, it generates a <strong>single</strong> value from every group.</p>
+<p>If we not only want to operate on a group of rows but also want our function return a single value for every input row, we should use window function.</p>
+<h1 id="Example-of-last-activity-time"><a href="#Example-of-last-activity-time" class="headerlink" title="Example of last_activity_time"></a>Example of last_activity_time</h1><h2 id="Business-requirement"><a href="#Business-requirement" class="headerlink" title="Business requirement"></a>Business requirement</h2><p>We have a user table with 3 columns. When user click our app, our tracking application will save user’s tracking record. For example: user Tom used its Linux device visited our website at 1st day, then uses ios device visited on 2nd and 3rd days.</p>
+<table>
+<thead>
+<tr>
+<th>user_name</th>
+<th>active_timestamp</th>
+<th>os</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tom</td>
+<td>1</td>
+<td>linux</td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>2</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>3</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>3</td>
+<td>windows</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>4</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>5</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>6</td>
+<td>android</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>7</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>8</td>
+<td>windows</td>
+</tr>
+</tbody></table>
+<p>Our requirement is to calculate the last active timestamp of Tom, Jerry and Speike.</p>
+<h2 id="Implementation"><a href="#Implementation" class="headerlink" title="Implementation"></a>Implementation</h2><h3 id="Prepare-for-data"><a href="#Prepare-for-data" class="headerlink" title="Prepare for data"></a>Prepare for data</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">prepareExampleData</span></span>: <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> columns = <span class="type">Seq</span>(<span class="string">&quot;user_name&quot;</span>, <span class="string">&quot;activity_time&quot;</span>, <span class="string">&quot;os&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> data = <span class="type">Seq</span>(</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>, <span class="number">1</span>, <span class="string">&quot;linux&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>,	<span class="number">2</span>,	<span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>, <span class="number">3</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">3</span>, <span class="string">&quot;windows&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">4</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">5</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">6</span>, <span class="string">&quot;android&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">7</span>,	<span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">8</span>,	<span class="string">&quot;windows&quot;</span>)</span><br><span class="line">  )</span><br><span class="line">  spark.createDataFrame(data).toDF(columns: _*)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Use-Spark-SQL"><a href="#Use-Spark-SQL" class="headerlink" title="Use Spark SQL"></a>Use Spark SQL</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calculateLastActivitySql</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    df.createTempView(<span class="string">&quot;user_table&quot;</span>)</span><br><span class="line">    df.sqlContext.sql(</span><br><span class="line">      <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">        |select *,</span></span><br><span class="line"><span class="string">        |first(activity_time) over(partition by user_name order by activity_time desc) as last_activity_time</span></span><br><span class="line"><span class="string">        |from user_table&quot;&quot;&quot;</span>.stripMargin</span><br><span class="line">    )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Use-Spark-DataFrame-API"><a href="#Use-Spark-DataFrame-API" class="headerlink" title="Use Spark DataFrame API"></a>Use Spark DataFrame API</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calculateLastActivity</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    <span class="keyword">val</span> window = <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>).orderBy(col(<span class="string">&quot;activity_time&quot;</span>).desc)</span><br><span class="line">    df.withColumn(<span class="string">&quot;last_activity_time&quot;</span>, first(<span class="string">&quot;activity_time&quot;</span>).over(window))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">+---------+-------------+-------+------------------+</span><br><span class="line">|user_name|activity_time|     os|last_activity_time|</span><br><span class="line">+---------+-------------+-------+------------------+</span><br><span class="line">|      <span class="type">Tom</span>|            <span class="number">3</span>|    ios|                 <span class="number">3</span>|</span><br><span class="line">|      <span class="type">Tom</span>|            <span class="number">2</span>|    ios|                 <span class="number">3</span>|</span><br><span class="line">|      <span class="type">Tom</span>|            <span class="number">1</span>|  linux|                 <span class="number">3</span>|</span><br><span class="line">|    <span class="type">Jerry</span>|            <span class="number">8</span>|windows|                 <span class="number">8</span>|</span><br><span class="line">|    <span class="type">Jerry</span>|            <span class="number">7</span>|    ios|                 <span class="number">8</span>|</span><br><span class="line">|    <span class="type">Jerry</span>|            <span class="number">6</span>|android|                 <span class="number">8</span>|</span><br><span class="line">|   <span class="type">Speike</span>|            <span class="number">5</span>|    ios|                 <span class="number">5</span>|</span><br><span class="line">|   <span class="type">Speike</span>|            <span class="number">4</span>|    ios|                 <span class="number">5</span>|</span><br><span class="line">|   <span class="type">Speike</span>|            <span class="number">3</span>|windows|                 <span class="number">5</span>|</span><br><span class="line">+---------+-------------+-------+------------------+</span><br></pre></td></tr></table></figure>
+
+<h1 id="Compare-with-groupBy"><a href="#Compare-with-groupBy" class="headerlink" title="Compare with groupBy"></a>Compare with groupBy</h1><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">compareWithGroupby</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    <span class="keyword">val</span> result = df.groupBy(<span class="string">&quot;user_name&quot;</span>).agg(</span><br><span class="line">      max(<span class="string">&quot;activity_time&quot;</span>).as(<span class="string">&quot;last_activity_time&quot;</span>)</span><br><span class="line">    )</span><br><span class="line">    df.join(result, usingColumn = <span class="string">&quot;user_name&quot;</span>)</span><br><span class="line">      .select(<span class="string">&quot;user_name&quot;</span>, <span class="string">&quot;activity_time&quot;</span>, <span class="string">&quot;os&quot;</span>, <span class="string">&quot;last_activity_time&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">== <span class="type">Physical</span> <span class="type">Plan</span> ==</span><br><span class="line">*(<span class="number">3</span>) <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, last_activity_time#<span class="number">16</span>]</span><br><span class="line">+- *(<span class="number">3</span>) <span class="type">BroadcastHashJoin</span> [user_name#<span class="number">6</span>], [user_name#<span class="number">19</span>], <span class="type">Inner</span>, <span class="type">BuildRight</span></span><br><span class="line">   :- <span class="type">LocalTableScan</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>]</span><br><span class="line">   +- <span class="type">BroadcastExchange</span> <span class="type">HashedRelationBroadcastMode</span>(<span class="type">List</span>(input[<span class="number">0</span>, string, <span class="literal">true</span>]))</span><br><span class="line">      +- *(<span class="number">2</span>) <span class="type">HashAggregate</span>(keys=[user_name#<span class="number">19</span>], functions=[max(activity_time#<span class="number">20</span>)])</span><br><span class="line">         +- <span class="type">Exchange</span> hashpartitioning(user_name#<span class="number">19</span>, <span class="number">200</span>)</span><br><span class="line">            +- *(<span class="number">1</span>) <span class="type">HashAggregate</span>(keys=[user_name#<span class="number">19</span>], functions=[partial_max(activity_time#<span class="number">20</span>)])</span><br><span class="line">               +- <span class="type">LocalTableScan</span> [user_name#<span class="number">19</span>, activity_time#<span class="number">20</span>]</span><br><span class="line">== <span class="type">Physical</span> <span class="type">Plan</span> ==</span><br><span class="line"><span class="type">Window</span> [first(activity_time#<span class="number">7</span>, <span class="literal">false</span>) windowspecdefinition(user_name#<span class="number">6</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>, specifiedwindowframe(<span class="type">RangeFrame</span>, unboundedpreceding$(), currentrow$())) <span class="type">AS</span> last_activity_time#<span class="number">34</span>], [user_name#<span class="number">6</span>], [activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>]</span><br><span class="line">+- *(<span class="number">1</span>) <span class="type">Sort</span> [user_name#<span class="number">6</span> <span class="type">ASC</span> <span class="type">NULLS</span> <span class="type">FIRST</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>], <span class="literal">false</span>, <span class="number">0</span></span><br><span class="line">   +- <span class="type">Exchange</span> hashpartitioning(user_name#<span class="number">6</span>, <span class="number">200</span>)</span><br><span class="line">      +- <span class="type">LocalTableScan</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>]</span><br></pre></td></tr></table></figure>
+
+<h1 id="Conditioned-window-implementation"><a href="#Conditioned-window-implementation" class="headerlink" title="Conditioned window implementation"></a>Conditioned window implementation</h1><h1 id="Boundary"><a href="#Boundary" class="headerlink" title="Boundary"></a>Boundary</h1><h1 id="Reference-docs"><a href="#Reference-docs" class="headerlink" title="Reference docs"></a>Reference docs</h1><p><a target="_blank" rel="noopener" href="https://databricks.com/blog/2015/07/15/introducing-window-functions-in-spark-sql.html">https://databricks.com/blog/2015/07/15/introducing-window-functions-in-spark-sql.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/40048919/what-is-the-difference-between-rowsbetween-and-rangebetween">https://stackoverflow.com/questions/40048919/what-is-the-difference-between-rowsbetween-and-rangebetween</a></p>
+<p><a href="How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257.csv">User table</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Jerry%20a5076969c25b4ac19c8205b93517fb65/" data-id="ckpb9jbis00045itbeeu2fl2l" data-title="" class="article-share-link">Share</a>
+      <a data-url="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/" data-id="ckpb9jbin00005itb66lg4pln" data-title="How to use Window in Spark" class="article-share-link">Share</a>
       
       
       
@@ -100,255 +183,46 @@
 
 
   
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Speike be1f4ec108df4312898a595ea550d010" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
+    <article id="post-hello-world" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
   <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Speike%20be1f4ec108df4312898a595ea550d010/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.078Z" itemprop="datePublished">2021-05-30</time>
+    <a href="/2021/05/30/hello-world/" class="article-date">
+  <time class="dt-published" datetime="2021-05-30T13:59:51.278Z" itemprop="datePublished">2021-05-30</time>
 </a>
     
   </div>
   <div class="article-inner">
     
     
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="p-name article-title" href="/2021/05/30/hello-world/">Hello World</a>
+    </h1>
+  
+
+      </header>
+    
     <div class="e-content article-entry" itemprop="articleBody">
       
-        <h1 id="Speike"><a href="#Speike" class="headerlink" title="Speike"></a>Speike</h1><p>active_timestamp: 5<br>os: ios</p>
+        <p>Welcome to <a target="_blank" rel="noopener" href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a target="_blank" rel="noopener" href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a target="_blank" rel="noopener" href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a target="_blank" rel="noopener" href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a target="_blank" rel="noopener" href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
 
       
     </div>
     <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Speike%20be1f4ec108df4312898a595ea550d010/" data-id="ckpb9jbit00065itb220y541c" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Tom 89b8f0c827c942fa912ac86c1e78d406" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%2089b8f0c827c942fa912ac86c1e78d406/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.078Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Tom"><a href="#Tom" class="headerlink" title="Tom"></a>Tom</h1><p>active_timestamp: 2<br>os: ios</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%2089b8f0c827c942fa912ac86c1e78d406/" data-id="ckpb9jbiu00085itbeidzcsnp" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Tom ecc79081d05149de89ec305ea49225e7" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%20ecc79081d05149de89ec305ea49225e7/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.078Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Tom"><a href="#Tom" class="headerlink" title="Tom"></a>Tom</h1><p>active_timestamp: 3<br>os: ios</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%20ecc79081d05149de89ec305ea49225e7/" data-id="ckpb9jbiv00095itbhsvlhmjb" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Tom fca8669608d84a33a6ae4d47ceb93ff1" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%20fca8669608d84a33a6ae4d47ceb93ff1/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.078Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Tom"><a href="#Tom" class="headerlink" title="Tom"></a>Tom</h1><p>active_timestamp: 1<br>os: linux</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%20fca8669608d84a33a6ae4d47ceb93ff1/" data-id="ckpb9jbiv000a5itb5qssb1mm" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Jerry 965287e6f1ac480ca9449e1819157170" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Jerry%20965287e6f1ac480ca9449e1819157170/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.068Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Jerry"><a href="#Jerry" class="headerlink" title="Jerry"></a>Jerry</h1><p>active_timestamp: 6<br>os: android</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Jerry%20965287e6f1ac480ca9449e1819157170/" data-id="ckpb9jbir00035itbdjdb88jw" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Speike 53a4becedf564b13b9cd648fc97b1ef1" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Speike%2053a4becedf564b13b9cd648fc97b1ef1/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.068Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Speike"><a href="#Speike" class="headerlink" title="Speike"></a>Speike</h1><p>active_timestamp: 4<br>os: ios</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Speike%2053a4becedf564b13b9cd648fc97b1ef1/" data-id="ckpb9jbis00055itb6zeed9r9" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Speike e7b5c29b06d641b9adaf3f6f9ba11d6c" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Speike%20e7b5c29b06d641b9adaf3f6f9ba11d6c/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.068Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Speike"><a href="#Speike" class="headerlink" title="Speike"></a>Speike</h1><p>active_timestamp: 3<br>os: windows</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Speike%20e7b5c29b06d641b9adaf3f6f9ba11d6c/" data-id="ckpb9jbiu00075itbazjic0vg" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Untitled 992122ba256e4dc9b9f73f0efaa8fee5" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Untitled%20992122ba256e4dc9b9f73f0efaa8fee5/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.068Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Untitled"><a href="#Untitled" class="headerlink" title="Untitled"></a>Untitled</h1>
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Untitled%20992122ba256e4dc9b9f73f0efaa8fee5/" data-id="ckpb9jbiw000b5itbfuze2egh" data-title="" class="article-share-link">Share</a>
-      
-      
-      
-    </footer>
-  </div>
-  
-</article>
-
-
-
-  
-    <article id="post-How to use Window in Spark dc83ce2097b54bda8b3bd62feb8805e6/User table 6d68e0caa9aa46a0912ee1c6e610e257/Jerry 601e30ad9e5540e4bd16282018a993ae" class="h-entry article article-type-post" itemprop="blogPost" itemscope itemtype="https://schema.org/BlogPosting">
-  <div class="article-meta">
-    <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Jerry%20601e30ad9e5540e4bd16282018a993ae/" class="article-date">
-  <time class="dt-published" datetime="2021-05-30T14:09:14.058Z" itemprop="datePublished">2021-05-30</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-    <div class="e-content article-entry" itemprop="articleBody">
-      
-        <h1 id="Jerry"><a href="#Jerry" class="headerlink" title="Jerry"></a>Jerry</h1><p>active_timestamp: 7<br>os: ios</p>
-
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="http://example.com/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Jerry%20601e30ad9e5540e4bd16282018a993ae/" data-id="ckpb9jbir00025itbfnvxgcl3" data-title="" class="article-share-link">Share</a>
+      <a data-url="http://example.com/2021/05/30/hello-world/" data-id="ckpb9jbiq00015itb0ec458oi" data-title="Hello World" class="article-share-link">Share</a>
       
       
       
@@ -361,11 +235,6 @@
 
   
 
-
-  <nav id="page-nav">
-    
-    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" href="/page/2/">Next &raquo;</a>
-  </nav>
 
 </section>
         
@@ -383,7 +252,7 @@
   <div class="widget-wrap">
     <h3 class="widget-title">Archives</h3>
     <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/05/">May 2021</a></li></ul>
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/06/">June 2021</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2021/05/">May 2021</a></li></ul>
     </div>
   </div>
 
@@ -396,23 +265,11 @@
       <ul>
         
           <li>
-            <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Jerry%20a5076969c25b4ac19c8205b93517fb65/">(no title)</a>
+            <a href="/2021/06/02/How%20to%20use%20Window%20in%20Spark/">How to use Window in Spark</a>
           </li>
         
           <li>
-            <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Speike%20be1f4ec108df4312898a595ea550d010/">(no title)</a>
-          </li>
-        
-          <li>
-            <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%2089b8f0c827c942fa912ac86c1e78d406/">(no title)</a>
-          </li>
-        
-          <li>
-            <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%20ecc79081d05149de89ec305ea49225e7/">(no title)</a>
-          </li>
-        
-          <li>
-            <a href="/2021/05/30/How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257/Tom%20fca8669608d84a33a6ae4d47ceb93ff1/">(no title)</a>
+            <a href="/2021/05/30/hello-world/">Hello World</a>
           </li>
         
       </ul>
@@ -428,7 +285,7 @@
   <div class="outer">
     <div id="footer-info" class="inner">
       
-      &copy; 2021 John Doe<br>
+      &copy; 2021 YzRuntime&#39;s blog<br>
       Powered by <a href="https://hexo.io/" target="_blank">Hexo</a>
     </div>
   </div>
