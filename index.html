@@ -146,6 +146,106 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/14/Java-HashMap-learning/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/06/14/Java-HashMap-learning/" class="post-title-link" itemprop="url">Java HashMap learning</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2022-06-14 18:04:22 / Modified: 18:18:08" itemprop="dateCreated datePublished" datetime="2022-06-14T18:04:22+08:00">2022-06-14</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <table>
+<thead>
+<tr>
+<th>Short description</th>
+<th>Link</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Time Complexity of HashMap methods</td>
+<td><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/4577998/time-complexity-of-hashmap-methods">https://stackoverflow.com/questions/4577998/time-complexity-of-hashmap-methods</a></td>
+</tr>
+<tr>
+<td>Time Complexity of HashMap get()</td>
+<td><a target="_blank" rel="noopener" href="https://skyfly.xyz/2020/02/25/Java/HashMapTimeComplexity/">https://skyfly.xyz/2020/02/25/Java/HashMapTimeComplexity/</a></td>
+</tr>
+<tr>
+<td>Understanding HashMap resize()</td>
+<td><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000015812438">https://segmentfault.com/a/1190000015812438</a></td>
+</tr>
+<tr>
+<td>The main document that I learn HashMap</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/v123411739/article/details/78996181">https://blog.csdn.net/v123411739/article/details/78996181</a></td>
+</tr>
+<tr>
+<td>Another document contains some interview questions</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/v123411739/article/details/115364158">https://blog.csdn.net/v123411739/article/details/115364158</a></td>
+</tr>
+<tr>
+<td>A document with illustration (need to login CSDN)</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/yinwenjie/article/details/102531402">https://blog.csdn.net/yinwenjie/article/details/102531402</a></td>
+</tr>
+</tbody></table>
+<p>Questions:</p>
+<ul>
+<li>Didn’t clearly learn the remove() method.</li>
+<li>For the tableSizeFor(), it is changed after java 8. But I don’t know how to locate the version of a code change.</li>
+</ul>
+<p>Problems solved:</p>
+<ul>
+<li>The difference between <code>(n - 1) &amp; hash</code> and <code>(e.hash &amp; oldCap) == 0</code> by reading <code>Understanding HashMap resize()</code>.</li>
+<li>The time complexity for put() get() delete() is from O(1) to O(k), the key can be a bin’s Linked List or the height of the red black tree.</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/22/Use-global-Map-to-manage-the-alias-of-Spark-DataFrame/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -787,7 +887,7 @@ This means if our Window’s spec is from the current row to the first row, the 
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">4</span>
+          <span class="site-state-item-count">5</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
