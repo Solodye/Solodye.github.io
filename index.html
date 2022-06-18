@@ -236,6 +236,162 @@ So it extends <code>elementData</code> to <code>SOFT_MAX</code> directly.</li>
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2022/06/14/Java-collections-src-learning-note/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/06/14/Java-collections-src-learning-note/" class="post-title-link" itemprop="url">Java collections source code learning note</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-06-14 18:04:22" itemprop="dateCreated datePublished" datetime="2022-06-14T18:04:22+08:00">2022-06-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2022-06-18 18:36:30" itemprop="dateModified" datetime="2022-06-18T18:36:30+08:00">2022-06-18</time>
+              </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="Summary"><a href="#Summary" class="headerlink" title="Summary"></a>Summary</h1><p><a target="_blank" rel="noopener" href="https://docs.google.com/spreadsheets/d/1RrJplFDo4eUL97iUsypflmbEnVFG2VhLAe-VERYTwzg/edit?usp=sharing">https://docs.google.com/spreadsheets/d/1RrJplFDo4eUL97iUsypflmbEnVFG2VhLAe-VERYTwzg/edit?usp=sharing</a></p>
+<iframe height="800" width="1200" src="https://docs.google.com/spreadsheets/d/e/2PACX-1vRCSl4ojOL9MT7e9NuO_ZDyExOBPe0sovmbrgBEIqISwKkfdPBOoYVi2ylNUMFChsYAulF6eBi6znii/pubhtml?widget=true&amp;headers=false"></iframe>
+
+
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><h2 id="1-HashMap"><a href="#1-HashMap" class="headerlink" title="1 HashMap"></a>1 HashMap</h2><table>
+<thead>
+<tr>
+<th>Short description</th>
+<th>Link</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Time Complexity of HashMap methods</td>
+<td><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/4577998/time-complexity-of-hashmap-methods">https://stackoverflow.com/questions/4577998/time-complexity-of-hashmap-methods</a></td>
+</tr>
+<tr>
+<td>Time Complexity of HashMap get()</td>
+<td><a target="_blank" rel="noopener" href="https://skyfly.xyz/2020/02/25/Java/HashMapTimeComplexity/">https://skyfly.xyz/2020/02/25/Java/HashMapTimeComplexity/</a></td>
+</tr>
+<tr>
+<td>Understanding HashMap resize()</td>
+<td><a target="_blank" rel="noopener" href="https://segmentfault.com/a/1190000015812438">https://segmentfault.com/a/1190000015812438</a></td>
+</tr>
+<tr>
+<td>The main document that I learn HashMap</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/v123411739/article/details/78996181">https://blog.csdn.net/v123411739/article/details/78996181</a></td>
+</tr>
+<tr>
+<td>Another document contains some interview questions</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/v123411739/article/details/115364158">https://blog.csdn.net/v123411739/article/details/115364158</a></td>
+</tr>
+<tr>
+<td>A document with illustration (need to login CSDN)</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/yinwenjie/article/details/102531402">https://blog.csdn.net/yinwenjie/article/details/102531402</a></td>
+</tr>
+</tbody></table>
+<p>Questions:</p>
+<ul>
+<li>Didn’t clearly learn the remove() method.</li>
+<li>For the tableSizeFor(), it is changed after java 8. But I don’t know how to locate the version of a code change.</li>
+</ul>
+<p>Problems solved:</p>
+<ul>
+<li>The difference between <code>(n - 1) &amp; hash</code> and <code>(e.hash &amp; oldCap) == 0</code> by reading <code>Understanding HashMap resize()</code>.</li>
+<li>The time complexity for put() get() delete() is from O(1) to O(k), the key can be a bin’s Linked List or the height of the red black tree.</li>
+</ul>
+<h2 id="2-ArrayList"><a href="#2-ArrayList" class="headerlink" title="2 ArrayList"></a>2 ArrayList</h2><table>
+<thead>
+<tr>
+<th>Short description</th>
+<th>Link</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A main document that I’ve studied</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/zxt0601/article/details/77281231">https://blog.csdn.net/zxt0601/article/details/77281231</a></td>
+</tr>
+<tr>
+<td>Another ArrayList docs that I didn’t read too much</td>
+<td><a target="_blank" rel="noopener" href="https://blog.51cto.com/u_13604316/2673349">https://blog.51cto.com/u_13604316/2673349</a></td>
+</tr>
+</tbody></table>
+<p>Questions:</p>
+<ul>
+<li>How ArrayList insert an value?<ul>
+<li>grow() -&gt; System.arrayCopy the second half -&gt; Insert the target value to the middle empty slot</li>
+</ul>
+</li>
+</ul>
+<h2 id="3-LinkedList"><a href="#3-LinkedList" class="headerlink" title="3 LinkedList"></a>3 LinkedList</h2><table>
+<thead>
+<tr>
+<th>Short description</th>
+<th>Link</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>A main document that I’ve studied</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/zxt0601/article/details/77341098">https://blog.csdn.net/zxt0601/article/details/77341098</a></td>
+</tr>
+</tbody></table>
+<p>Questions:</p>
+<ul>
+<li>Why LinkedList didn’t implement the isEmpty() method directly?</li>
+<li>How LinkedList treat the value that is null?<ul>
+<li>LinkedList can find the index based on the keyObject.equals().
+ For example, <code>LinkList.indexOf(Object o)</code>. When we input indexOf(null), it need to avoid calling null.equals().
+ And use == instead.</li>
+<li><code>LinkedList.contains()</code> also calls <code>indexOf(Object o)</code></li>
+</ul>
+</li>
+</ul>
+
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="en">
     <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/22/Use-global-Map-to-manage-the-alias-of-Spark-DataFrame/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -819,7 +975,7 @@ This means if our Window’s spec is from the current row to the first row, the 
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">4</span>
+          <span class="site-state-item-count">5</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
