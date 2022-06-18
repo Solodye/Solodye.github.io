@@ -28,7 +28,7 @@
 <meta property="og:description" content="HashMap   Short description Link    Time Complexity of HashMap methods https:&#x2F;&#x2F;stackoverflow.com&#x2F;questions&#x2F;4577998&#x2F;time-complexity-of-hashmap-methods   Time Complexity of HashMap get() https:&#x2F;&#x2F;skyfly.">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2022-06-14T10:04:22.000Z">
-<meta property="article:modified_time" content="2022-06-18T05:41:23.452Z">
+<meta property="article:modified_time" content="2022-06-18T08:37:30.852Z">
 <meta property="article:tag" content="Spark">
 <meta property="article:tag" content="Big data">
 <meta name="twitter:card" content="summary">
@@ -181,7 +181,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-06-18 13:41:23" itemprop="dateModified" datetime="2022-06-18T13:41:23+08:00">2022-06-18</time>
+                <time title="Modified: 2022-06-18 16:37:30" itemprop="dateModified" datetime="2022-06-18T16:37:30+08:00">2022-06-18</time>
               </span>
 
           
@@ -255,7 +255,10 @@
 </tbody></table>
 <p>Questions:</p>
 <ul>
-<li>How ArrayList insert an value?</li>
+<li>How ArrayList insert an value?<ul>
+<li>grow() -&gt; System.arrayCopy the second half -&gt; Insert the target value to the middle empty slot</li>
+</ul>
+</li>
 </ul>
 <h1 id="LinkedList"><a href="#LinkedList" class="headerlink" title="LinkedList"></a>LinkedList</h1><table>
 <thead>
@@ -272,7 +275,13 @@
 <p>Questions:</p>
 <ul>
 <li>Why LinkedList didn’t implement the isEmpty() method directly?</li>
-<li>How LinkedList treat the value that is null?</li>
+<li>How LinkedList treat the value that is null?<ul>
+<li>LinkedList can find the index based on the keyObject.equals().
+ For example, <code>LinkList.indexOf(Object o)</code>. When we input indexOf(null), it need to avoid calling null.equals().
+ And use == instead.</li>
+<li><code>LinkedList.contains()</code> also calls <code>indexOf(Object o)</code></li>
+</ul>
+</li>
 </ul>
 <!-- flag of hidden posts -->
     </div>
