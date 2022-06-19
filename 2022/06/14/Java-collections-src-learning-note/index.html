@@ -28,7 +28,7 @@
 <meta property="og:description" content="Summaryhttps:&#x2F;&#x2F;docs.google.com&#x2F;spreadsheets&#x2F;d&#x2F;1RrJplFDo4eUL97iUsypflmbEnVFG2VhLAe-VERYTwzg&#x2F;edit?usp&#x3D;sharing    Reference1 HashMap   Short description Link    Time Complexity of HashMap methods https:&#x2F;">
 <meta property="og:locale" content="en_US">
 <meta property="article:published_time" content="2022-06-14T10:04:22.000Z">
-<meta property="article:modified_time" content="2022-06-18T10:36:30.952Z">
+<meta property="article:modified_time" content="2022-06-19T14:06:30.667Z">
 <meta property="article:tag" content="Spark">
 <meta property="article:tag" content="Big data">
 <meta name="twitter:card" content="summary">
@@ -181,7 +181,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2022-06-18 18:36:30" itemprop="dateModified" datetime="2022-06-18T18:36:30+08:00">2022-06-18</time>
+                <time title="Modified: 2022-06-19 22:06:30" itemprop="dateModified" datetime="2022-06-19T22:06:30+08:00">2022-06-19</time>
               </span>
 
           
@@ -235,6 +235,14 @@
 <ul>
 <li>Didn’t clearly learn the remove() method.</li>
 <li>For the tableSizeFor(), it is changed after java 8. But I don’t know how to locate the version of a code change.</li>
+<li>After the sharing<ul>
+<li>The actual binary calculation progress of the capability of Map. For example capability is 32, so binary is what?<ul>
+<li>For example, 111 is 7. But 7 cannot be the capacity.</li>
+</ul>
+</li>
+<li>What is amortized time complexity?</li>
+</ul>
+</li>
 </ul>
 <p>Problems solved:</p>
 <ul>
@@ -259,6 +267,12 @@
 </tbody></table>
 <p>Questions:</p>
 <ul>
+<li>Will System.arrayCopy got overlap? In linux, there are 2 way to copy the memory, one of them can cause overlap and data loss.</li>
+<li>Will ArrayList shrink?</li>
+<li>What is System.arrayCopy’s space complexity?</li>
+</ul>
+<p>Problem solved:</p>
+<ul>
 <li>How ArrayList insert an value?<ul>
 <li>grow() -&gt; System.arrayCopy the second half -&gt; Insert the target value to the middle empty slot</li>
 </ul>
@@ -279,6 +293,9 @@
 <p>Questions:</p>
 <ul>
 <li>Why LinkedList didn’t implement the isEmpty() method directly?</li>
+</ul>
+<p>Problem solved:</p>
+<ul>
 <li>How LinkedList treat the value that is null?<ul>
 <li>LinkedList can find the index based on the keyObject.equals().
  For example, <code>LinkList.indexOf(Object o)</code>. When we input indexOf(null), it need to avoid calling null.equals().
@@ -287,6 +304,20 @@
 </ul>
 </li>
 </ul>
+<h2 id="4-PriorityQueue"><a href="#4-PriorityQueue" class="headerlink" title="4 PriorityQueue"></a>4 PriorityQueue</h2><table>
+<thead>
+<tr>
+<th>Short description</th>
+<th>Link</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>PriorityQueue source code analysis doc with a little problem</td>
+<td><a target="_blank" rel="noopener" href="https://blog.csdn.net/codejas/article/details/85144502">https://blog.csdn.net/codejas/article/details/85144502</a></td>
+</tr>
+</tbody></table>
+<p>This <code>PriorityQueue source code analysis doc with a little problem</code> has a problem of saying that <code>PriorityQueue</code> is min-heap. 
+But actually, the <code>PriorityQueue</code> is max heap.</p>
 
     </div>
 
@@ -306,8 +337,8 @@
       <i class="fa fa-chevron-left"></i> Use global Map to manage the alias of Spark DataFrame
     </a></div>
       <div class="post-nav-item">
-    <a href="/2022/06/16/ArrayList-expansion-rule-in-Java-18/" rel="next" title="ArrayList expansion rule in Java 18">
-      ArrayList expansion rule in Java 18 <i class="fa fa-chevron-right"></i>
+    <a href="/2022/06/16/Collection-size-expansion-logic-refactor-in-Java-18/" rel="next" title="Collection size expansion logic refactor in Java 18">
+      Collection size expansion logic refactor in Java 18 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
       </footer>
@@ -367,7 +398,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Summary"><span class="nav-number">1.</span> <span class="nav-text">Summary</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reference"><span class="nav-number">2.</span> <span class="nav-text">Reference</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-HashMap"><span class="nav-number">2.1.</span> <span class="nav-text">1 HashMap</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-ArrayList"><span class="nav-number">2.2.</span> <span class="nav-text">2 ArrayList</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-LinkedList"><span class="nav-number">2.3.</span> <span class="nav-text">3 LinkedList</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Summary"><span class="nav-number">1.</span> <span class="nav-text">Summary</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reference"><span class="nav-number">2.</span> <span class="nav-text">Reference</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-HashMap"><span class="nav-number">2.1.</span> <span class="nav-text">1 HashMap</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-ArrayList"><span class="nav-number">2.2.</span> <span class="nav-text">2 ArrayList</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-LinkedList"><span class="nav-number">2.3.</span> <span class="nav-text">3 LinkedList</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-PriorityQueue"><span class="nav-number">2.4.</span> <span class="nav-text">4 PriorityQueue</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
