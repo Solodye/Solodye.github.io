@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 5.4.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha256-wiz7ZSCn/btzhjKDQBms9Hx4sSeUYsDrTLg7roPstac=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.19.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"style":null,"show_result":false},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="When develop table processing Spark applications, we may encounter this issue. 1234567Exception in thread &quot;main&quot; org.apache.spark.sql.AnalysisException: Reference &amp;#x27;os&amp;#x27; is ambiguous">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How to resolve the &quot;Reference &#39;xxx&#39; is ambiguous&quot; problem after Spark join">
+<meta property="og:url" content="http://example.com/2021/08/22/How-to-resolve-the-Reference-xxx-is-ambiguous-problem-after-Spark-join/index.html">
+<meta property="og:site_name" content="YzRuntime&#39;s blog">
+<meta property="og:description" content="When develop table processing Spark applications, we may encounter this issue. 1234567Exception in thread &quot;main&quot; org.apache.spark.sql.AnalysisException: Reference &amp;#x27;os&amp;#x27; is ambiguous">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2021-08-22T09:09:19.000Z">
+<meta property="article:modified_time" content="2025-07-06T05:57:58.871Z">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="Big data">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2021/08/22/How-to-resolve-the-Reference-xxx-is-ambiguous-problem-after-Spark-join/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2021/08/22/How-to-resolve-the-Reference-xxx-is-ambiguous-problem-after-Spark-join/","path":"2021/08/22/How-to-resolve-the-Reference-xxx-is-ambiguous-problem-after-Spark-join/","title":"How to resolve the \"Reference 'xxx' is ambiguous\" problem after Spark join"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>How to resolve the "Reference 'xxx' is ambiguous" problem after Spark join | YzRuntime's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">YzRuntime's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-Reproduce"><span class="nav-number">1.</span> <span class="nav-text">1. Reproduce</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-Solution"><span class="nav-number">2.</span> <span class="nav-text">2. Solution</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-Drop-redundant-columns-before-join"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 Drop redundant columns before join</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-Use-a-relative-way-to-keep-left-redundant-columns-or-right-redundant-columns"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Use a relative way to keep left redundant columns or right redundant columns</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reference"><span class="nav-number">3.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/08/22/How-to-resolve-the-Reference-xxx-is-ambiguous-problem-after-Spark-join/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="How to resolve the "Reference 'xxx' is ambiguous" problem after Spark join | YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          How to resolve the "Reference 'xxx' is ambiguous" problem after Spark join
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2021-08-22 17:09:19" itemprop="dateCreated datePublished" datetime="2021-08-22T17:09:19+08:00">2021-08-22</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2025-07-06 13:57:58" itemprop="dateModified" datetime="2025-07-06T13:57:58+08:00">2025-07-06</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><p>When develop table processing Spark applications, we may encounter this issue.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">Exception in thread &quot;main&quot; org.apache.spark.sql.AnalysisException: Reference &#x27;os&#x27; is ambiguous, could be: default.year_table.os, os, osAndSize.os.;</span><br><span class="line">	at org.apache.spark.sql.catalyst.expressions.package$AttributeSeq.resolve(package.scala:259)</span><br><span class="line">	at org.apache.spark.sql.catalyst.plans.logical.LogicalPlan.resolveChildren(LogicalPlan.scala:101)</span><br><span class="line">	at org.apache.spark.sql.catalyst.analysis.Analyzer$ResolveReferences$$anonfun$42.apply(Analyzer.scala:1001)</span><br><span class="line">	at org.apache.spark.sql.catalyst.analysis.Analyzer$ResolveReferences$$anonfun$42.apply(Analyzer.scala:1003)</span><br><span class="line">	at org.apache.spark.sql.catalyst.analysis.package$.withPosition(package.scala:53)</span><br><span class="line">	...</span><br></pre></td></tr></table></figure>
+<p>The root cause of this issue is our DataFrame have two columns with same column name.
+It may be caused by our inappropriate join. To handle this issue, we should remove the redundant columns <strong>before</strong> we join
+to make sure there are no columns with same column name, or use <code>alias</code> to remove it after join.</p>
+<p>We can use easier code to reproduce this problem.</p>
+<h1 id="1-Reproduce"><a href="#1-Reproduce" class="headerlink" title="1. Reproduce"></a>1. Reproduce</h1><p>Imagine company’s business is to sell the <strong>OS</strong>. We already get the basic information from several data sources.</p>
+<p>First, we have the most important table <code>year_table</code>, which is ingested from MySQL to Hive.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">+---+-------+----+-------+-----+</span><br><span class="line">|id |os     |year|os     |price|</span><br><span class="line">+---+-------+----+-------+-----+</span><br><span class="line">|1  |ubuntu |2005|ubuntu |50   |</span><br><span class="line">|2  |xiaomi |2010|xiaomi |100  |</span><br><span class="line">|3  |suse   |2015|suse   |150  |</span><br><span class="line">|4  |samsung|2020|samsung|200  |</span><br><span class="line">+---+-------+----+-------+-----+</span><br></pre></td></tr></table></figure>
+<p>From the data we can see the OS <code>ubuntu</code> we have was launched in 2015. And we also have 3 other OS.
+When we read this data, we should read it from Hive. So we simulate this <code>year_table</code> like this.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">getOsAndYear</span></span>: <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> columns = <span class="type">Seq</span>(<span class="string">&quot;id&quot;</span>, <span class="string">&quot;os&quot;</span>, <span class="string">&quot;year&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> data = <span class="type">Seq</span>(</span><br><span class="line">    (<span class="number">1</span>,<span class="string">&quot;ubuntu&quot;</span>, <span class="number">2005</span>),</span><br><span class="line">    (<span class="number">2</span>, <span class="string">&quot;xiaomi&quot;</span>, <span class="number">2010</span>),</span><br><span class="line">    (<span class="number">3</span>, <span class="string">&quot;suse&quot;</span>, <span class="number">2015</span>),</span><br><span class="line">    (<span class="number">4</span>, <span class="string">&quot;samsung&quot;</span>, <span class="number">2020</span>)</span><br><span class="line">  )</span><br><span class="line">  <span class="keyword">val</span> osAndYear = spark.createDataFrame(data).toDF(columns: _*)</span><br><span class="line">  <span class="keyword">val</span> schema = <span class="string">&quot;default&quot;</span></span><br><span class="line">  osAndYear.write.mode(<span class="string">&quot;overwrite&quot;</span>).saveAsTable(<span class="string">s&quot;<span class="subst">$schema</span>.year_table&quot;</span>)</span><br><span class="line">  spark.read.table(<span class="string">s&quot;<span class="subst">$schema</span>.year_table&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>Then we have <code>price_table</code> and <code>size_table</code>, which records the price and the space that the OS occupied.
+These 2 tables are come from some human static data, which is not stable.
+Some name of the OS is null, but ID still can be used.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">getOsAndPrice</span></span>: <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> columns = <span class="type">Seq</span>(<span class="string">&quot;id&quot;</span>, <span class="string">&quot;os&quot;</span>, <span class="string">&quot;price&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> data = <span class="type">Seq</span>(</span><br><span class="line">    (<span class="number">1</span>,<span class="string">&quot;ubuntu&quot;</span>, <span class="number">50</span>),</span><br><span class="line">    (<span class="number">2</span>, <span class="string">&quot;xiaomi&quot;</span>, <span class="number">100</span>),</span><br><span class="line">    (<span class="number">3</span>, <span class="literal">null</span>, <span class="number">150</span>),</span><br><span class="line">    (<span class="number">4</span>, <span class="string">&quot;samsung&quot;</span>, <span class="number">200</span>)</span><br><span class="line">  )</span><br><span class="line">  spark.createDataFrame(data).toDF(columns: _*)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">getOsAndSize</span></span>: <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> columns = <span class="type">Seq</span>(<span class="string">&quot;id&quot;</span>, <span class="string">&quot;os&quot;</span>, <span class="string">&quot;size&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> data = <span class="type">Seq</span>(</span><br><span class="line">    (<span class="number">1</span>,<span class="string">&quot;ubuntu&quot;</span>, <span class="number">3444</span>),</span><br><span class="line">    (<span class="number">2</span>, <span class="literal">null</span>, <span class="number">4546</span>),</span><br><span class="line">    (<span class="number">3</span>, <span class="string">&quot;suse&quot;</span>, <span class="number">5747</span>),</span><br><span class="line">    (<span class="number">4</span>, <span class="string">&quot;samsung&quot;</span>, <span class="number">687687</span>)</span><br><span class="line">  )</span><br><span class="line">  spark.createDataFrame(data).toDF(columns: _*)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>We should join it by name as our name value is not stable.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> yearAndPrice = getOsAndYear.join(broadcast(getOsAndPrice), <span class="type">Seq</span>(<span class="string">&quot;id&quot;</span>), <span class="string">&quot;left_outer&quot;</span>)</span><br><span class="line"><span class="keyword">val</span> osAndSize = getOsAndSize.alias(<span class="string">&quot;osAndSize&quot;</span>)</span><br><span class="line"><span class="keyword">val</span> yearPriceAndSize = yearAndPrice.join(osAndSize,</span><br><span class="line">  yearAndPrice(<span class="string">&quot;id&quot;</span>) &lt;=&gt; col(<span class="string">&quot;osAndSize.id&quot;</span>), <span class="string">&quot;left_outer&quot;</span>)</span><br><span class="line">yearPriceAndSize.show(<span class="number">1000</span>, <span class="literal">false</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">+---+-------+----+-------+-----+---+-------+------+</span><br><span class="line">|id |os     |year|os     |price|id |os     |size  |</span><br><span class="line">+---+-------+----+-------+-----+---+-------+------+</span><br><span class="line">|1  |ubuntu |2005|ubuntu |50   |1  |ubuntu |3444  |</span><br><span class="line">|2  |xiaomi |2010|xiaomi |100  |2  |null   |4546  |</span><br><span class="line">|3  |suse   |2015|null   |150  |3  |suse   |5747  |</span><br><span class="line">|4  |samsung|2020|samsung|200  |4  |samsung|687687|</span><br><span class="line">+---+-------+----+-------+-----+---+-------+------+</span><br></pre></td></tr></table></figure>
+<p>The weird things happened. Our table has 3 identical <code>os</code> columns.
+If we try to select this os column, the exception would be reproduced.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yearPriceAndSize.select(<span class="string">&quot;os&quot;</span>) </span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Exception in thread &quot;main&quot; org.apache.spark.sql.AnalysisException: Reference &#x27;os&#x27; is ambiguous, could be: default.year_table.os, os, osAndSize.os.;</span><br></pre></td></tr></table></figure>
+
+<h1 id="2-Solution"><a href="#2-Solution" class="headerlink" title="2. Solution"></a>2. Solution</h1><h2 id="2-1-Drop-redundant-columns-before-join"><a href="#2-1-Drop-redundant-columns-before-join" class="headerlink" title="2.1 Drop redundant columns before join"></a>2.1 Drop redundant columns before join</h2><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> yearAndPrice = getOsAndYear</span><br><span class="line">  .join(broadcast(getOsAndPrice.drop(<span class="string">&quot;os&quot;</span>)<span class="comment">/*drop os*/</span>), <span class="type">Seq</span>(<span class="string">&quot;id&quot;</span>), <span class="string">&quot;left_outer&quot;</span>)</span><br><span class="line"><span class="keyword">val</span> osAndSize = getOsAndSize.alias(<span class="string">&quot;osAndSize&quot;</span>)</span><br><span class="line"><span class="keyword">val</span> yearPriceAndSize = yearAndPrice.join(osAndSize.drop(<span class="string">&quot;os&quot;</span>),<span class="comment">// drop os</span></span><br><span class="line">  yearAndPrice(<span class="string">&quot;id&quot;</span>) &lt;=&gt; col(<span class="string">&quot;osAndSize.id&quot;</span>), <span class="string">&quot;left_outer&quot;</span>)</span><br><span class="line">yearPriceAndSize.select(<span class="string">&quot;os&quot;</span>).show(<span class="number">100</span>, <span class="literal">false</span>)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">+-------+</span><br><span class="line">|os     |</span><br><span class="line">+-------+</span><br><span class="line">|ubuntu |</span><br><span class="line">|xiaomi |</span><br><span class="line">|suse   |</span><br><span class="line">|samsung|</span><br><span class="line">+-------+</span><br></pre></td></tr></table></figure>
+<p>Of course this solution is so cumbersome due to we should drop the redundant columns again and again.
+As far as we know, sometimes we only know some important columns in some tables in our live environment
+rather than all the columns. If everytime we remove them, we would repeat ourselves again and again.</p>
+<h2 id="2-2-Use-a-relative-way-to-keep-left-redundant-columns-or-right-redundant-columns"><a href="#2-2-Use-a-relative-way-to-keep-left-redundant-columns-or-right-redundant-columns" class="headerlink" title="2.2 Use a relative way to keep left redundant columns or right redundant columns"></a>2.2 Use a relative way to keep left redundant columns or right redundant columns</h2><p>We can use <code>Set</code> to find the columns we want to keep or remove. Usually our join has a main DataFrame, which is a DataFrame
+that we only want to add some necessary columns after join. For example, the <code>year_table</code> is the main DataFrame in the
+1st join due to we want to add the <code>price</code> column to the <code>year_table</code> rather than add the <code>year</code> to others.</p>
+<p>After the joining, we will apply a select, in which we only keeps the columns that comes from a main DataFrame and the
+columns that the main DataFrame don’t have. This is what clearRedundant will do.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">dropRedundantColumnsAfterJoin</span></span>(): <span class="type">Unit</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> osAndPrice = broadcast(getOsAndPrice).alias(<span class="string">&quot;osAndPrice&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> osAndYear = getOsAndYear.alias(<span class="string">&quot;osAndYear&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> osAndSize = getOsAndSize.alias(<span class="string">&quot;osAndSize&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> yearAndPrice = osAndYear</span><br><span class="line">    .join(osAndPrice, <span class="type">Seq</span>(<span class="string">&quot;id&quot;</span>), <span class="string">&quot;left_outer&quot;</span>)</span><br><span class="line">    .transform(clearRedundant(osAndYear, <span class="string">&quot;osAndYear&quot;</span>, osAndPrice, <span class="string">&quot;osAndPrice&quot;</span>))</span><br><span class="line">    .alias(<span class="string">&quot;yearAndPrice&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> yearPriceAndSize =</span><br><span class="line">    osAndSize.join(yearAndPrice, <span class="type">Seq</span>(<span class="string">&quot;id&quot;</span>), <span class="string">&quot;right_outer&quot;</span>)</span><br><span class="line">      .transform(clearRedundant(yearAndPrice, <span class="string">&quot;yearAndPrice&quot;</span>, osAndSize, <span class="string">&quot;osAndSize&quot;</span>))</span><br><span class="line">  yearPriceAndSize.show(<span class="number">200</span>, <span class="literal">false</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">clearRedundant</span></span>(mainDf: <span class="type">DataFrame</span>, mainDfAlias: <span class="type">String</span>,</span><br><span class="line">                   appendDf: <span class="type">DataFrame</span>, appendDfAlias: <span class="type">String</span>): <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> mainCols = mainDf.columns.toSet</span><br><span class="line">  <span class="keyword">val</span> appendDfCols = appendDf.columns.toSet</span><br><span class="line">  <span class="comment">// Usually our join is to append some columns to a main DataFrame</span></span><br><span class="line">  <span class="comment">// So the columns to be append is other DataFrame&#x27;s columns - the columns we already have in main DataFrame</span></span><br><span class="line">  <span class="keyword">val</span> appendCols: <span class="type">Set</span>[<span class="type">String</span>] = appendDfCols -- mainCols</span><br><span class="line">  <span class="keyword">val</span> colsAfterJoin: <span class="type">Set</span>[<span class="type">Column</span>] = &#123;</span><br><span class="line">    <span class="comment">// here is to remove the column alias to make sure the new joined df have no redundant alias</span></span><br><span class="line">    mainCols.map(c =&gt; col(<span class="string">s&quot;<span class="subst">$mainDfAlias</span>.<span class="subst">$c</span>&quot;</span>).as(c)) union</span><br><span class="line">      appendCols.map(c =&gt; col(<span class="string">s&quot;<span class="subst">$appendDfAlias</span>.<span class="subst">$c</span>&quot;</span>).as(c))</span><br><span class="line">  &#125;</span><br><span class="line">  finalDf =&gt; finalDf.select(colsAfterJoin.toList: _*)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">+-------+----+---+-----+------+</span><br><span class="line">|os     |year|id |price|size  |</span><br><span class="line">+-------+----+---+-----+------+</span><br><span class="line">|ubuntu |2005|1  |50   |3444  |</span><br><span class="line">|xiaomi |2010|2  |100  |4546  |</span><br><span class="line">|suse   |2015|3  |150  |5747  |</span><br><span class="line">|samsung|2020|4  |200  |687687|</span><br><span class="line">+-------+----+---+-----+------+</span><br></pre></td></tr></table></figure>
+
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><p>The code in this article: <a target="_blank" rel="noopener" href="https://github.com/Solodye/spark-demo/blob/main/src/main/scala/net/i18ndev/spark/alias/ReferenceAmbiguousReproduce.scala">https://github.com/Solodye/spark-demo/blob/main/src/main/scala/net/i18ndev/spark/alias/ReferenceAmbiguousReproduce.scala</a></p>
+<p>How to mock Hive in Spark app: <a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/55068459/setup-spark-for-ci-how-to-mock-hive-tables">https://stackoverflow.com/questions/55068459/setup-spark-for-ci-how-to-mock-hive-tables</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2021/06/02/How%20to%20use%20Window%20in%20Spark/" rel="prev" title="How to use Window in Spark">
+                  <i class="fa fa-angle-left"></i> How to use Window in Spark
+                </a>
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/08/22/Use-global-Map-to-manage-the-alias-of-Spark-DataFrame/" rel="next" title="Use global Map to manage the alias of Spark DataFrame">
+                  Use global Map to manage the alias of Spark DataFrame <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder"></span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

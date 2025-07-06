@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 5.4.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha256-wiz7ZSCn/btzhjKDQBms9Hx4sSeUYsDrTLg7roPstac=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.19.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"style":null,"show_result":false},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="BackgroundWhen we use groupBy, it generates a single value from every group. If we not only want to operate on a group of rows but also want our function return a single value for every input row, we">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How to use Window in Spark">
+<meta property="og:url" content="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/index.html">
+<meta property="og:site_name" content="YzRuntime&#39;s blog">
+<meta property="og:description" content="BackgroundWhen we use groupBy, it generates a single value from every group. If we not only want to operate on a group of rows but also want our function return a single value for every input row, we">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_1.png">
+<meta property="og:image" content="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_2.png">
+<meta property="og:image" content="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_4.png">
+<meta property="og:image" content="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_5.png">
+<meta property="article:published_time" content="2021-06-02T10:53:54.000Z">
+<meta property="article:modified_time" content="2025-07-06T05:57:58.869Z">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="Big data">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_1.png">
+
+
+<link rel="canonical" href="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/","path":"2021/06/02/How to use Window in Spark/","title":"How to use Window in Spark"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>How to use Window in Spark | YzRuntime's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">YzRuntime's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Background"><span class="nav-number">1.</span> <span class="nav-text">Background</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Example-of-last-activity-time"><span class="nav-number">2.</span> <span class="nav-text">Example of last_activity_time</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Business-requirement"><span class="nav-number">2.1.</span> <span class="nav-text">Business requirement</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Implementation"><span class="nav-number">2.2.</span> <span class="nav-text">Implementation</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Prepare-for-data"><span class="nav-number">2.2.1.</span> <span class="nav-text">Prepare for data</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Use-Spark-SQL"><span class="nav-number">2.2.2.</span> <span class="nav-text">Use Spark SQL</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Use-Spark-DataFrame-API"><span class="nav-number">2.2.3.</span> <span class="nav-text">Use Spark DataFrame API</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Compare-with-groupBy"><span class="nav-number">3.</span> <span class="nav-text">Compare with groupBy</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Conditioned-window-implementation"><span class="nav-number">4.</span> <span class="nav-text">Conditioned window implementation</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Boundary"><span class="nav-number">5.</span> <span class="nav-text">Boundary</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Why-null-still-occurs"><span class="nav-number">5.1.</span> <span class="nav-text">Why null still occurs</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reference-docs"><span class="nav-number">6.</span> <span class="nav-text">Reference docs</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="How to use Window in Spark | YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          How to use Window in Spark
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2021-06-02 18:53:54" itemprop="dateCreated datePublished" datetime="2021-06-02T18:53:54+08:00">2021-06-02</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2025-07-06 13:57:58" itemprop="dateModified" datetime="2025-07-06T13:57:58+08:00">2025-07-06</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="Background"><a href="#Background" class="headerlink" title="Background"></a>Background</h1><p>When we use groupBy, it generates a <strong>single</strong> value from every group.</p>
+<p>If we not only want to operate on a group of rows but also want our function return a single value for every input row, we should use window function.</p>
+<h1 id="Example-of-last-activity-time"><a href="#Example-of-last-activity-time" class="headerlink" title="Example of last_activity_time"></a>Example of last_activity_time</h1><h2 id="Business-requirement"><a href="#Business-requirement" class="headerlink" title="Business requirement"></a>Business requirement</h2><p>We have a user table with 3 columns. When user click our app, our tracking application will save user’s tracking record. For example: user Tom used its Linux device visited our website at 1st day, then uses ios device visited on 2nd and 3rd days.</p>
+<table>
+<thead>
+<tr>
+<th>user_name</th>
+<th>active_timestamp</th>
+<th>os</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tom</td>
+<td>1</td>
+<td>linux</td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>2</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>3</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>3</td>
+<td>windows</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>4</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>5</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>6</td>
+<td>android</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>7</td>
+<td>ios</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>8</td>
+<td>windows</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>9</td>
+<td>linux</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>10</td>
+<td>macbook</td>
+</tr>
+</tbody></table>
+<p>Our requirement is to calculate the last active timestamp of Tom, Jerry and Speike.</p>
+<h2 id="Implementation"><a href="#Implementation" class="headerlink" title="Implementation"></a>Implementation</h2><h3 id="Prepare-for-data"><a href="#Prepare-for-data" class="headerlink" title="Prepare for data"></a>Prepare for data</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">prepareExampleData</span></span>: <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> columns = <span class="type">Seq</span>(<span class="string">&quot;user_name&quot;</span>, <span class="string">&quot;activity_time&quot;</span>, <span class="string">&quot;os&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> data = <span class="type">Seq</span>(</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>, <span class="number">1</span>, <span class="string">&quot;linux&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>,	<span class="number">2</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>, <span class="number">3</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">3</span>, <span class="string">&quot;windows&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">4</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">5</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">6</span>, <span class="string">&quot;android&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">7</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">8</span>, <span class="string">&quot;windows&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">9</span>, <span class="string">&quot;linux&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">10</span>, <span class="string">&quot;macbook&quot;</span>)</span><br><span class="line">  )</span><br><span class="line">  spark.createDataFrame(data).toDF(columns: _*)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Use-Spark-SQL"><a href="#Use-Spark-SQL" class="headerlink" title="Use Spark SQL"></a>Use Spark SQL</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calculateLastActivitySql</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    df.createTempView(<span class="string">&quot;user_table&quot;</span>)</span><br><span class="line">    df.sqlContext.sql(</span><br><span class="line">      <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">        |select *,</span></span><br><span class="line"><span class="string">        |first(activity_time) over(partition by user_name order by activity_time desc) as last_activity_time</span></span><br><span class="line"><span class="string">        |from user_table&quot;&quot;&quot;</span>.stripMargin</span><br><span class="line">    )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="Use-Spark-DataFrame-API"><a href="#Use-Spark-DataFrame-API" class="headerlink" title="Use Spark DataFrame API"></a>Use Spark DataFrame API</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calculateLastActivity</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    <span class="keyword">val</span> window = <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>).orderBy(col(<span class="string">&quot;activity_time&quot;</span>).desc)</span><br><span class="line">    df.withColumn(<span class="string">&quot;last_activity_time&quot;</span>, first(<span class="string">&quot;activity_time&quot;</span>).over(window))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">+---------+-------------+-------+------------------+</span><br><span class="line">|user_name|activity_time|     os|last_activity_time|</span><br><span class="line">+---------+-------------+-------+------------------+</span><br><span class="line">|      Tom|            3|    ios|                 3|</span><br><span class="line">|      Tom|            2|    ios|                 3|</span><br><span class="line">|      Tom|            1|  linux|                 3|</span><br><span class="line">|    Jerry|           10|macbook|                10|</span><br><span class="line">|    Jerry|            9|  linux|                10|</span><br><span class="line">|    Jerry|            8|windows|                10|</span><br><span class="line">|    Jerry|            7|    ios|                10|</span><br><span class="line">|    Jerry|            6|android|                10|</span><br><span class="line">|   Speike|            5|    ios|                 5|</span><br><span class="line">|   Speike|            4|    ios|                 5|</span><br><span class="line">|   Speike|            3|windows|                 5|</span><br><span class="line">+---------+-------------+-------+------------------+</span><br></pre></td></tr></table></figure>
+
+<h1 id="Compare-with-groupBy"><a href="#Compare-with-groupBy" class="headerlink" title="Compare with groupBy"></a>Compare with groupBy</h1><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">compareWithGroupby</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    <span class="keyword">val</span> result = df.groupBy(<span class="string">&quot;user_name&quot;</span>).agg(</span><br><span class="line">      max(<span class="string">&quot;activity_time&quot;</span>).as(<span class="string">&quot;last_activity_time&quot;</span>)</span><br><span class="line">    )</span><br><span class="line">    df.join(result, usingColumn = <span class="string">&quot;user_name&quot;</span>)</span><br><span class="line">      .select(<span class="string">&quot;user_name&quot;</span>, <span class="string">&quot;activity_time&quot;</span>, <span class="string">&quot;os&quot;</span>, <span class="string">&quot;last_activity_time&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">== <span class="type">Physical</span> <span class="type">Plan</span> ==</span><br><span class="line">*(<span class="number">3</span>) <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, last_activity_time#<span class="number">16</span>]</span><br><span class="line">+- *(<span class="number">3</span>) <span class="type">BroadcastHashJoin</span> [user_name#<span class="number">6</span>], [user_name#<span class="number">19</span>], <span class="type">Inner</span>, <span class="type">BuildRight</span></span><br><span class="line">   :- <span class="type">LocalTableScan</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>]</span><br><span class="line">   +- <span class="type">BroadcastExchange</span> <span class="type">HashedRelationBroadcastMode</span>(<span class="type">List</span>(input[<span class="number">0</span>, string, <span class="literal">true</span>]))</span><br><span class="line">      +- *(<span class="number">2</span>) <span class="type">HashAggregate</span>(keys=[user_name#<span class="number">19</span>], functions=[max(activity_time#<span class="number">20</span>)])</span><br><span class="line">         +- <span class="type">Exchange</span> hashpartitioning(user_name#<span class="number">19</span>, <span class="number">200</span>)</span><br><span class="line">            +- *(<span class="number">1</span>) <span class="type">HashAggregate</span>(keys=[user_name#<span class="number">19</span>], functions=[partial_max(activity_time#<span class="number">20</span>)])</span><br><span class="line">               +- <span class="type">LocalTableScan</span> [user_name#<span class="number">19</span>, activity_time#<span class="number">20</span>]</span><br><span class="line">== <span class="type">Physical</span> <span class="type">Plan</span> ==</span><br><span class="line"><span class="type">Window</span> [first(activity_time#<span class="number">7</span>, <span class="literal">false</span>) windowspecdefinition(user_name#<span class="number">6</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>, specifiedwindowframe(<span class="type">RangeFrame</span>, unboundedpreceding$(), currentrow$())) <span class="type">AS</span> last_activity_time#<span class="number">34</span>], [user_name#<span class="number">6</span>], [activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>]</span><br><span class="line">+- *(<span class="number">1</span>) <span class="type">Sort</span> [user_name#<span class="number">6</span> <span class="type">ASC</span> <span class="type">NULLS</span> <span class="type">FIRST</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>], <span class="literal">false</span>, <span class="number">0</span></span><br><span class="line">   +- <span class="type">Exchange</span> hashpartitioning(user_name#<span class="number">6</span>, <span class="number">200</span>)</span><br><span class="line">      +- <span class="type">LocalTableScan</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>]</span><br></pre></td></tr></table></figure>
+
+<h1 id="Conditioned-window-implementation"><a href="#Conditioned-window-implementation" class="headerlink" title="Conditioned window implementation"></a>Conditioned window implementation</h1><p>Now we have another requirement: calculate the last_ios_active_time.</p>
+<p>last_ios_active_time represents the last time that user uses its ios platform.</p>
+<p>For example, Jerry uses ios to login our website at 7th day while he uses Windows device on 8th day. So Jerry’s last_ios_activity_time is 7.</p>
+<table>
+<thead>
+<tr>
+<th>user_name</th>
+<th>active_timestamp</th>
+<th>os</th>
+<th>last_ios_active_time</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tom</td>
+<td>1</td>
+<td>linux</td>
+<td></td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>2</td>
+<td>ios</td>
+<td></td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>3</td>
+<td>ios</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>3</td>
+<td>windows</td>
+<td></td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>4</td>
+<td>ios</td>
+<td></td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>5</td>
+<td>ios</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>6</td>
+<td>android</td>
+<td></td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>7</td>
+<td>ios</td>
+<td>7</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>8</td>
+<td>windows</td>
+<td></td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>9</td>
+<td>linux</td>
+<td></td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>10</td>
+<td>macbook</td>
+<td></td>
+</tr>
+</tbody></table>
+<p>If we want to calculate this metric, we should have a window with a condition: only consider the record that  os = “ios”.</p>
+<p>To implement this, we can duplicate a temporary column for window.</p>
+<table>
+<thead>
+<tr>
+<th>user_name</th>
+<th>active_timestamp</th>
+<th>os</th>
+<th>_tmp_window_order_timestamp</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tom</td>
+<td>1</td>
+<td>linux</td>
+<td>null</td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>2</td>
+<td>ios</td>
+<td>2</td>
+</tr>
+<tr>
+<td>Tom</td>
+<td>3</td>
+<td>ios</td>
+<td>3</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>3</td>
+<td>windows</td>
+<td>null</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>4</td>
+<td>ios</td>
+<td>4</td>
+</tr>
+<tr>
+<td>Speike</td>
+<td>5</td>
+<td>ios</td>
+<td>5</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>6</td>
+<td>android</td>
+<td>null</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>7</td>
+<td>ios</td>
+<td>7</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>8</td>
+<td>windows</td>
+<td>null</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>9</td>
+<td>linux</td>
+<td>null</td>
+</tr>
+<tr>
+<td>Jerry</td>
+<td>10</td>
+<td>macbook</td>
+<td>null</td>
+</tr>
+</tbody></table>
+<p>And then set a window order by this temporary timestamp.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calcLastIosActivityTime</span></span>(tmp_col_name: <span class="type">String</span> = <span class="string">&quot;_tmp_window_order_timestamp&quot;</span>)</span><br><span class="line">                            : <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt; &#123;</span><br><span class="line">    <span class="keyword">val</span> conditionedDf = df.withColumn(tmp_col_name,</span><br><span class="line">      when(col(<span class="string">&quot;os&quot;</span>) === <span class="string">&quot;ios&quot;</span>, col(<span class="string">&quot;activity_time&quot;</span>)).otherwise(<span class="literal">null</span>))</span><br><span class="line">    <span class="keyword">val</span> conditionedWindow =</span><br><span class="line">      <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>).orderBy(col(tmp_col_name).desc)</span><br><span class="line">    conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, first(tmp_col_name).over(conditionedWindow))</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|user_name|activity_time|     os|_tmp_window_order_timestamp|last_ios_active_time|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|      Tom|            3|    ios|                          3|                   3|</span><br><span class="line">|      Tom|            2|    ios|                          2|                   3|</span><br><span class="line">|      Tom|            1|  linux|                       null|                   3|</span><br><span class="line">|    Jerry|            7|    ios|                          7|                   7|</span><br><span class="line">|    Jerry|            6|android|                       null|                   7|</span><br><span class="line">|    Jerry|            8|windows|                       null|                   7|</span><br><span class="line">|    Jerry|            9|  linux|                       null|                   7|</span><br><span class="line">|    Jerry|           10|macbook|                       null|                   7|</span><br><span class="line">|   Speike|            5|    ios|                          5|                   5|</span><br><span class="line">|   Speike|            4|    ios|                          4|                   5|</span><br><span class="line">|   Speike|            3|windows|                       null|                   5|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br></pre></td></tr></table></figure>
+<h1 id="Boundary"><a href="#Boundary" class="headerlink" title="Boundary"></a>Boundary</h1><p>Sometimes we may add some redundant orderBy command. It supports to be no effect. 
+But actually, in some cases, redundant orderBy may lead the unexpected problem.</p>
+<p>Our business requirement is to calculate <code>last_ios_activity_time</code>. We have two methods to calculate this metric.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="function"><span class="keyword">def</span> <span class="title">showWindowBoundary</span> </span>= &#123;</span><br><span class="line">  <span class="keyword">val</span> df = prepareExampleData</span><br><span class="line">  <span class="keyword">val</span> tmp_col_name: <span class="type">String</span> = <span class="string">&quot;_tmp_window_order_timestamp&quot;</span></span><br><span class="line">  <span class="keyword">val</span> conditionedDf = df.withColumn(tmp_col_name,</span><br><span class="line">    when(col(<span class="string">&quot;os&quot;</span>) === <span class="string">&quot;ios&quot;</span>, col(<span class="string">&quot;activity_time&quot;</span>)).otherwise(<span class="literal">null</span>)).cache()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Method 1</span></span><br><span class="line">  println(<span class="string">&quot;Method 1&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> boundaryWindow =</span><br><span class="line">    <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>).orderBy(col(<span class="string">&quot;activity_time&quot;</span>).desc)</span><br><span class="line">  conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(boundaryWindow)).show()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Method 2</span></span><br><span class="line">  println(<span class="string">&quot;Method 2&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> userWindow =</span><br><span class="line">    <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>)</span><br><span class="line">  conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(userWindow)).show()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Method 1 has a redundant <code>orderBy(col(&quot;activity_time&quot;).desc)</code> since we finally use <code>max</code> to calculate the metric. While Method 2 doesn’t have any <code>orderBy</code>.</p>
+<p>It seems that the redundant <code>orderBy</code> won’t affect anything. But finally we find it will lead to some record in partition cannot be covered by the Window calculation.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Method 1</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|user_name|activity_time|     os|_tmp_window_order_timestamp|last_ios_active_time|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|      Tom|            3|    ios|                          3|                   3|</span><br><span class="line">|      Tom|            2|    ios|                          2|                   3|</span><br><span class="line">|      Tom|            1|  linux|                       null|                   3|</span><br><span class="line">|    Jerry|           10|macbook|                       null|                null|</span><br><span class="line">|    Jerry|            9|  linux|                       null|                null|</span><br><span class="line">|    Jerry|            8|windows|                       null|                null|</span><br><span class="line">|    Jerry|            7|    ios|                          7|                   7|</span><br><span class="line">|    Jerry|            6|android|                       null|                   7|</span><br><span class="line">|   Speike|            5|    ios|                          5|                   5|</span><br><span class="line">|   Speike|            4|    ios|                          4|                   5|</span><br><span class="line">|   Speike|            3|windows|                       null|                   5|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br></pre></td></tr></table></figure>
+<p>From the data we can see that Jerry uses his ios on 7th day, which is the latest activity_time. </p>
+<p>If we order all Jerry’s tracking data by activity time descending, there is 3 records before the record that user_name=Jerry and active_timestamp=7. 
+This means if our Window’s spec is from the current row to the first row, the record with activity_time=8 to 10 will not be covered.</p>
+<p>Method 2 calculated normal value.</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Method 2</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|user_name|activity_time|     os|_tmp_window_order_timestamp|last_ios_active_time|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|      Tom|            1|  linux|                       null|                   3|</span><br><span class="line">|      Tom|            2|    ios|                          2|                   3|</span><br><span class="line">|      Tom|            3|    ios|                          3|                   3|</span><br><span class="line">|    Jerry|            6|android|                       null|                   7|</span><br><span class="line">|    Jerry|            7|    ios|                          7|                   7|</span><br><span class="line">|    Jerry|            8|windows|                       null|                   7|</span><br><span class="line">|    Jerry|            9|  linux|                       null|                   7|</span><br><span class="line">|    Jerry|           10|macbook|                       null|                   7|</span><br><span class="line">|   Speike|            3|windows|                       null|                   5|</span><br><span class="line">|   Speike|            4|    ios|                          4|                   5|</span><br><span class="line">|   Speike|            5|    ios|                          5|                   5|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br></pre></td></tr></table></figure>
+
+<h2 id="Why-null-still-occurs"><a href="#Why-null-still-occurs" class="headerlink" title="Why null still occurs"></a>Why <code>null</code> still occurs</h2><p>We can see the logical plan. When we use <code>orderBy</code>, the default spec is <code>unboundedpreceding to current row</code>.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(boundaryWindow)).explain(<span class="literal">true</span>)</span><br><span class="line"></span><br><span class="line">== <span class="type">Parsed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line"><span class="symbol">&#x27;Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>, max(<span class="symbol">&#x27;_tmp_window_order_timestamp</span>) windowspecdefinition(<span class="symbol">&#x27;user_name</span>, <span class="symbol">&#x27;activity_time</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>, unspecifiedframe$()) <span class="type">AS</span> last_ios_active_time#<span class="number">291</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">8</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">7</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">22</span>]</span><br><span class="line">   +- <span class="type">Project</span> [_1#<span class="number">0</span> <span class="type">AS</span> user_name#<span class="number">6</span>, _2#<span class="number">1</span> <span class="type">AS</span> activity_time#<span class="number">7</span>, _3#<span class="number">2</span> <span class="type">AS</span> os#<span class="number">8</span>]</span><br><span class="line">      +- <span class="type">LocalRelation</span> [_1#<span class="number">0</span>, _2#<span class="number">1</span>, _3#<span class="number">2</span>]</span><br><span class="line"></span><br><span class="line">== <span class="type">Analyzed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line">user_name: string, activity_time: int, os: string, _tmp_window_order_timestamp: int, last_ios_active_time: int</span><br><span class="line"><span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>, last_ios_active_time#<span class="number">291</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>, last_ios_active_time#<span class="number">291</span>, last_ios_active_time#<span class="number">291</span>]</span><br><span class="line">   +- <span class="type">Window</span> [max(_tmp_window_order_timestamp#<span class="number">22</span>) windowspecdefinition(user_name#<span class="number">6</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>, specifiedwindowframe(<span class="type">RangeFrame</span>, unboundedpreceding$(), currentrow$())) <span class="type">AS</span> last_ios_active_time#<span class="number">291</span>], [user_name#<span class="number">6</span>], [activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>]</span><br><span class="line">      +- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>]</span><br><span class="line">         +- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">8</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">7</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">22</span>]</span><br><span class="line">            +- <span class="type">Project</span> [_1#<span class="number">0</span> <span class="type">AS</span> user_name#<span class="number">6</span>, _2#<span class="number">1</span> <span class="type">AS</span> activity_time#<span class="number">7</span>, _3#<span class="number">2</span> <span class="type">AS</span> os#<span class="number">8</span>]</span><br><span class="line">               +- <span class="type">LocalRelation</span> [_1#<span class="number">0</span>, _2#<span class="number">1</span>, _3#<span class="number">2</span>]</span><br></pre></td></tr></table></figure>
+
+<p>When we don’t use <code>orderBy</code>, the default spec is <code>unboundedproceding, unboundedfollowing</code>.</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(userWindow)).explain</span><br><span class="line"></span><br><span class="line">== <span class="type">Parsed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line"><span class="symbol">&#x27;Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>, max(<span class="symbol">&#x27;_tmp_window_order_timestamp</span>) windowspecdefinition(<span class="symbol">&#x27;user_name</span>, unspecifiedframe$()) <span class="type">AS</span> last_ios_active_time#<span class="number">1383</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">867</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">866</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">871</span>]</span><br><span class="line">   +- <span class="type">Project</span> [_1#<span class="number">859</span> <span class="type">AS</span> user_name#<span class="number">865</span>, _2#<span class="number">860</span> <span class="type">AS</span> activity_time#<span class="number">866</span>, _3#<span class="number">861</span> <span class="type">AS</span> os#<span class="number">867</span>]</span><br><span class="line">      +- <span class="type">LocalRelation</span> [_1#<span class="number">859</span>, _2#<span class="number">860</span>, _3#<span class="number">861</span>]</span><br><span class="line"></span><br><span class="line">== <span class="type">Analyzed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line">user_name: string, activity_time: int, os: string, _tmp_window_order_timestamp: int, last_ios_active_time: int</span><br><span class="line"><span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>, last_ios_active_time#<span class="number">1383</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>, last_ios_active_time#<span class="number">1383</span>, last_ios_active_time#<span class="number">1383</span>]</span><br><span class="line">   +- <span class="type">Window</span> [max(_tmp_window_order_timestamp#<span class="number">871</span>) windowspecdefinition(user_name#<span class="number">865</span>, specifiedwindowframe(<span class="type">RowFrame</span>, unboundedpreceding$(), unboundedfollowing$())) <span class="type">AS</span> last_ios_active_time#<span class="number">1383</span>], [user_name#<span class="number">865</span>]</span><br><span class="line">      +- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>]</span><br><span class="line">         +- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">867</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">866</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">871</span>]</span><br><span class="line">            +- <span class="type">Project</span> [_1#<span class="number">859</span> <span class="type">AS</span> user_name#<span class="number">865</span>, _2#<span class="number">860</span> <span class="type">AS</span> activity_time#<span class="number">866</span>, _3#<span class="number">861</span> <span class="type">AS</span> os#<span class="number">867</span>]</span><br><span class="line">               +- <span class="type">LocalRelation</span> [_1#<span class="number">859</span>, _2#<span class="number">860</span>, _3#<span class="number">861</span>]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+<p>For the record with activity_time=10, its window calculation result is null.</p>
+<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_1.png" class="">
+
+<p>In the second record, its window spec is from current line to the first line.</p>
+<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_2.png" class="">
+
+<p>When it comes to the record with activity_time=7, the window spec includes _tmp_window_order_timestamp=7. So the <code>max()</code> calculation result is 7.</p>
+<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_4.png" class="">
+
+<p>When it comes to the record with activity=6, its windos spec alos includes 7.</p>
+<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_5.png" class="">
+
+
+<h1 id="Reference-docs"><a href="#Reference-docs" class="headerlink" title="Reference docs"></a>Reference docs</h1><p><a target="_blank" rel="noopener" href="https://databricks.com/blog/2015/07/15/introducing-window-functions-in-spark-sql.html">https://databricks.com/blog/2015/07/15/introducing-window-functions-in-spark-sql.html</a></p>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/40048919/what-is-the-difference-between-rowsbetween-and-rangebetween">https://stackoverflow.com/questions/40048919/what-is-the-difference-between-rowsbetween-and-rangebetween</a></p>
+<p><a href="How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257.csv">User table</a></p>
+<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/30861919/what-is-rows-unbounded-preceding-used-for-in-teradata">Boundary</a></p>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+            </div>
+            <div class="post-nav-item">
+                <a href="/2021/08/22/How-to-resolve-the-Reference-xxx-is-ambiguous-problem-after-Spark-join/" rel="next" title="How to resolve the "Reference 'xxx' is ambiguous" problem after Spark join">
+                  How to resolve the "Reference 'xxx' is ambiguous" problem after Spark join <i class="fa fa-angle-right"></i>
+                </a>
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder"></span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>

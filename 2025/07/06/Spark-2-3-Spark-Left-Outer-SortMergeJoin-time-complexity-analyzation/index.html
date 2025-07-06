@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 5.4.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha256-wiz7ZSCn/btzhjKDQBms9Hx4sSeUYsDrTLg7roPstac=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.19.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"style":null,"show_result":false},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="ProblemWe have left table and right table, after some repartition, there are 1 partition got joined across lots of partitions. Here are the partition data inside:    left table partition L right table">
+<meta property="og:type" content="article">
+<meta property="og:title" content="&lt;Spark 2.3&gt; Spark Left Outer SortMergeJoin time complexity analyzation">
+<meta property="og:url" content="http://example.com/2025/07/06/Spark-2-3-Spark-Left-Outer-SortMergeJoin-time-complexity-analyzation/index.html">
+<meta property="og:site_name" content="YzRuntime&#39;s blog">
+<meta property="og:description" content="ProblemWe have left table and right table, after some repartition, there are 1 partition got joined across lots of partitions. Here are the partition data inside:    left table partition L right table">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-07-06T05:57:58.872Z">
+<meta property="article:modified_time" content="2025-07-06T05:57:58.872Z">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="Big data">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2025/07/06/Spark-2-3-Spark-Left-Outer-SortMergeJoin-time-complexity-analyzation/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/07/06/Spark-2-3-Spark-Left-Outer-SortMergeJoin-time-complexity-analyzation/","path":"2025/07/06/Spark-2-3-Spark-Left-Outer-SortMergeJoin-time-complexity-analyzation/","title":"\u003cSpark 2.3> Spark Left Outer SortMergeJoin time complexity analyzation"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title><Spark 2.3> Spark Left Outer SortMergeJoin time complexity analyzation | YzRuntime's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">YzRuntime's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Problem"><span class="nav-number">1.</span> <span class="nav-text">Problem</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Result"><span class="nav-number">2.</span> <span class="nav-text">Result</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Time-Complexity"><span class="nav-number">2.1.</span> <span class="nav-text">Time Complexity</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Spark-Optimization"><span class="nav-number">2.2.</span> <span class="nav-text">Spark Optimization</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Analyze"><span class="nav-number">3.</span> <span class="nav-text">Analyze</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Download-Spark-source-code"><span class="nav-number">3.1.</span> <span class="nav-text">1. Download Spark source code</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Change-a-unit-test"><span class="nav-number">3.2.</span> <span class="nav-text">2. Change a unit test</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-Details"><span class="nav-number">3.2.1.</span> <span class="nav-text">2.1 Details</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-GitHub-ref-link"><span class="nav-number">3.2.2.</span> <span class="nav-text">2.2 GitHub ref link</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-Run-and-analyze-the-log"><span class="nav-number">3.3.</span> <span class="nav-text">3. Run and analyze the log</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/07/06/Spark-2-3-Spark-Left-Outer-SortMergeJoin-time-complexity-analyzation/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="<Spark 2.3> Spark Left Outer SortMergeJoin time complexity analyzation | YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          <Spark 2.3> Spark Left Outer SortMergeJoin time complexity analyzation
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-07-06 13:57:58" itemprop="dateCreated datePublished" datetime="2025-07-06T13:57:58+08:00">2025-07-06</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="Problem"><a href="#Problem" class="headerlink" title="Problem"></a>Problem</h1><p>We have <code>left table</code> and <code>right table</code>, after some repartition, there are 1 partition got joined across lots of partitions.</p>
+<p>Here are the partition data inside:</p>
+<table>
+<thead>
+<tr>
+<th>left table partition L</th>
+<th>right table partition R</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>4</td>
+</tr>
+<tr>
+<td>4</td>
+<td>4</td>
+</tr>
+<tr>
+<td>8</td>
+<td>7</td>
+</tr>
+<tr>
+<td></td>
+<td>10</td>
+</tr>
+</tbody></table>
+<p>Suppose after <code>RDD.zipPartition</code>, L and R should be joined together.</p>
+<p>Without <code>Spark codegen</code> opened, how many times Spark will visit the data inside L and R?</p>
+<ul>
+<li>Will it be <code>L * R</code>? Like <code>3 * 4 = 12</code>?</li>
+<li>Will it be <code>L + R</code>? Like <code>3 + 4 = 7</code>?</li>
+</ul>
+<h1 id="Result"><a href="#Result" class="headerlink" title="Result"></a>Result</h1><h2 id="Time-Complexity"><a href="#Time-Complexity" class="headerlink" title="Time Complexity"></a>Time Complexity</h2><p>It is <code>L + R + 2 * C</code></p>
+<ul>
+<li><code>C is right side joined count</code></li>
+</ul>
+<h2 id="Spark-Optimization"><a href="#Spark-Optimization" class="headerlink" title="Spark Optimization"></a>Spark Optimization</h2><p>If right side table have lots of column cannot be joined, Spark still need to waste time to iterate it
+We can try</p>
+<ul>
+<li>Add more partition to reduce the chances of the hash collapse</li>
+<li>Use appropriate filter before join, to eliminate the chances that Spark iterate records that cannot be joined</li>
+<li>Use Bloom Filter when we are not sure how to write the filter</li>
+</ul>
+<h1 id="Analyze"><a href="#Analyze" class="headerlink" title="Analyze"></a>Analyze</h1><h2 id="1-Download-Spark-source-code"><a href="#1-Download-Spark-source-code" class="headerlink" title="1. Download Spark source code"></a>1. Download Spark source code</h2><ul>
+<li>Make sure you have linux environment, my environment is <code>Ubuntu 22.04 LTS</code></li>
+<li>Make sure running this command first <code>mvn clean -DskipTests -T 20 package</code>, eliminate all the maven compile issue, then refresh maven import</li>
+<li>Spark version: 2.3, which means you need to change to <code>branch-2.3</code></li>
+</ul>
+<h2 id="2-Change-a-unit-test"><a href="#2-Change-a-unit-test" class="headerlink" title="2. Change a unit test"></a>2. Change a unit test</h2><h3 id="2-1-Details"><a href="#2-1-Details" class="headerlink" title="2.1 Details"></a>2.1 Details</h3><p>For testing the <code>DataFrame</code> processing, we need to hardcode the data inside a UT.</p>
+<p>We pick up the following UT to make this change:</p>
+<ul>
+<li>Path: <code>sql/core/src/test/scala/org/apache/spark/sql/DataFrameSuite.scala</code></li>
+<li>Change:<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">  test(<span class="string">&quot;SPARK-20897: cached self-join should not fail&quot;</span>) &#123;</span><br><span class="line">  withSQLConf((<span class="type">SQLConf</span>.<span class="type">AUTO_BROADCASTJOIN_THRESHOLD</span>.key -&gt; <span class="string">&quot;0&quot;</span>), <span class="comment">// force to plan sort merge join</span></span><br><span class="line">    (<span class="type">SQLConf</span>.<span class="type">WHOLESTAGE_CODEGEN_ENABLED</span>.key -&gt; <span class="string">&quot;false&quot;</span> )  <span class="comment">// force Spark not to use CodeGen</span></span><br><span class="line">  ) &#123;</span><br><span class="line">    <span class="comment">// 0x added behind because later we output using print(), it will shows HEX value</span></span><br><span class="line">    <span class="keyword">val</span> df1 = <span class="type">Seq</span>(<span class="number">0x1</span> -&gt; <span class="number">0x1</span>, <span class="number">0x4</span> -&gt; <span class="number">0x4</span>, <span class="number">0x8</span> -&gt; <span class="number">0x8</span>).toDF(<span class="string">&quot;i&quot;</span>, <span class="string">&quot;j&quot;</span>).as(<span class="string">&quot;t1&quot;</span>).coalesce(<span class="number">1</span>) <span class="comment">// coalesce force all the data into one partition</span></span><br><span class="line">    <span class="keyword">val</span> df2 = <span class="type">Seq</span>(<span class="number">0x10</span> -&gt; <span class="number">0x1010</span>, <span class="number">0x4</span> -&gt; <span class="number">0x44</span>, <span class="number">0x4</span> -&gt; <span class="number">0x45</span>, <span class="number">0x7</span> -&gt; <span class="number">0x77</span>)</span><br><span class="line">      .toDF(<span class="string">&quot;i&quot;</span>, <span class="string">&quot;j&quot;</span>).as(<span class="string">&quot;t2&quot;</span>).coalesce(<span class="number">1</span>)</span><br><span class="line">    df1.join(df2, $<span class="string">&quot;t1.i&quot;</span> === $<span class="string">&quot;t2.i&quot;</span>, <span class="string">&quot;left_outer&quot;</span>).explain(<span class="literal">false</span>)</span><br><span class="line">    df1.join(df2, $<span class="string">&quot;t1.i&quot;</span> === $<span class="string">&quot;t2.i&quot;</span>, <span class="string">&quot;left_outer&quot;</span>).show(<span class="number">100</span>, <span class="literal">false</span>)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>Then, we add some log output to Spark source code</p>
+<ul>
+<li>Path: <code>sql/core/src/main/scala/org/apache/spark/sql/execution/joins/SortMergeJoinExec.scala</code></li>
+<li>Change: <figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br></pre></td><td class="code"><pre><span class="line">  <span class="keyword">protected</span> <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">doExecute</span></span>(): <span class="type">RDD</span>[<span class="type">InternalRow</span>] = &#123;</span><br><span class="line">  </span><br><span class="line"><span class="comment">/*... Ignore some unchanged code ...*/</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">case</span> <span class="type">LeftOuter</span> =&gt;</span><br><span class="line">          <span class="keyword">val</span> smjScanner = <span class="keyword">new</span> <span class="type">SortMergeJoinScanner</span>(</span><br><span class="line">            streamedKeyGenerator = createLeftKeyGenerator(),</span><br><span class="line">            bufferedKeyGenerator = createRightKeyGenerator(),</span><br><span class="line">            keyOrdering,</span><br><span class="line">            streamedIter = <span class="type">RowIterator</span>.fromScala(leftIter),</span><br><span class="line">            bufferedIter = <span class="type">RowIterator</span>.fromScala(rightIter),</span><br><span class="line">            inMemoryThreshold,</span><br><span class="line">            spillThreshold</span><br><span class="line">          )</span><br><span class="line">          <span class="keyword">val</span> rightNullRow = <span class="keyword">new</span> <span class="type">GenericInternalRow</span>(right.output.length)</span><br><span class="line">          print(<span class="string">&quot;LeftOuter init in SparkPlan\n&quot;</span>) <span class="comment">// Indicate the Spark init the LeftOuterIterator </span></span><br><span class="line">          <span class="keyword">new</span> <span class="type">LeftOuterIterator</span>(</span><br><span class="line">            smjScanner, rightNullRow, boundCondition, resultProj, numOutputRows).toScala</span><br><span class="line"></span><br><span class="line"><span class="comment">/*... Ignore some unchanged code ...*/</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span>[joins] <span class="class"><span class="keyword">class</span> <span class="title">SortMergeJoinScanner</span>(<span class="params"></span></span></span><br><span class="line"><span class="params"><span class="class">                                           streamedKeyGenerator: <span class="type">Projection</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                           bufferedKeyGenerator: <span class="type">Projection</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                           keyOrdering: <span class="type">Ordering</span>[<span class="type">InternalRow</span>],</span></span></span><br><span class="line"><span class="params"><span class="class">                                           streamedIter: <span class="type">RowIterator</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                           bufferedIter: <span class="type">RowIterator</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                           inMemoryThreshold: <span class="type">Int</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                           spillThreshold: <span class="type">Int</span></span>) </span>&#123;</span><br><span class="line">  <span class="keyword">private</span>[<span class="keyword">this</span>] <span class="keyword">var</span> streamedRow: <span class="type">InternalRow</span> = _</span><br><span class="line">  <span class="keyword">private</span>[<span class="keyword">this</span>] <span class="keyword">var</span> streamedRowKey: <span class="type">InternalRow</span> = _</span><br><span class="line">  <span class="keyword">private</span>[<span class="keyword">this</span>] <span class="keyword">var</span> bufferedRow: <span class="type">InternalRow</span> = _</span><br><span class="line">  <span class="keyword">private</span>[<span class="keyword">this</span>] <span class="keyword">var</span> bufferedRowKey: <span class="type">InternalRow</span> = _</span><br><span class="line">  <span class="keyword">private</span>[<span class="keyword">this</span>] <span class="keyword">var</span> matchJoinKey: <span class="type">InternalRow</span> = _</span><br><span class="line">  <span class="keyword">private</span>[<span class="keyword">this</span>] <span class="keyword">val</span> bufferedMatches =</span><br><span class="line">    <span class="keyword">new</span> <span class="type">ExternalAppendOnlyUnsafeRowArray</span>(inMemoryThreshold, spillThreshold)</span><br><span class="line"></span><br><span class="line">  print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> SortMergeJoinScanner init\n&quot;</span>) <span class="comment">// Because we need to observe the first time Spark reads the right table, rather than left table, we need to add this log to here</span></span><br><span class="line">  advancedBufferedToRowWithNullFreeJoinKey()</span><br><span class="line"></span><br><span class="line"><span class="comment">/*... Ignore some unchanged code ...*/</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">final</span> <span class="function"><span class="keyword">def</span> <span class="title">findNextOuterJoinRows</span></span>(): <span class="type">Boolean</span> = &#123; <span class="comment">// This is the main driver function to drive executor to iterate across all the left and right table</span></span><br><span class="line">    print(<span class="string">&quot;findNextOuterJoinRows() \n&quot;</span>) <span class="comment">// we add a log to identify when it enters this function</span></span><br><span class="line">    <span class="keyword">if</span> (!advancedStreamed()) &#123;</span><br><span class="line">      matchJoinKey = <span class="literal">null</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*... Ignore some unchanged code ...*/</span></span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">def</span> <span class="title">advancedStreamed</span></span>(): <span class="type">Boolean</span> = &#123; <span class="comment">// This advanced Streamed drives the left table&#x27;s Iterator to reads the left table</span></span><br><span class="line">    <span class="keyword">if</span> (streamedIter.advanceNext()) &#123;</span><br><span class="line">      streamedRow = streamedIter.getRow</span><br><span class="line">      streamedRowKey = streamedKeyGenerator(streamedRow)</span><br><span class="line">      <span class="comment">// Add logs to identify the left table reading</span></span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> advancedStreamed() streamedIter.advanceNext()=true streamedRow: <span class="subst">$&#123;streamedRow&#125;</span>\n&quot;</span>)</span><br><span class="line">      <span class="literal">true</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      streamedRow = <span class="literal">null</span></span><br><span class="line">      streamedRowKey = <span class="literal">null</span></span><br><span class="line">      <span class="comment">// Add logs to identify the left table reading</span></span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> advancedStreamed() streamedIter.advanceNext()=false streamedRow: <span class="subst">$&#123;streamedRow&#125;</span>\n&quot;</span>)</span><br><span class="line">      <span class="literal">false</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">      </span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">def</span> <span class="title">advancedBufferedToRowWithNullFreeJoinKey</span></span>(): <span class="type">Boolean</span> = &#123; <span class="comment">// This function drives the right table&#x27;s Iterator to read the right table, and it can skip the empty row key</span></span><br><span class="line">    <span class="keyword">var</span> foundRow: <span class="type">Boolean</span> = <span class="literal">false</span></span><br><span class="line">    <span class="keyword">while</span> (!foundRow &amp;&amp; bufferedIter.advanceNext()) &#123;</span><br><span class="line">      bufferedRow = bufferedIter.getRow</span><br><span class="line">      <span class="comment">// Add logs to identify the right table reading</span></span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> [advancedBufferedToRowWithNullFreeJoinKey() bufferedRow in while: <span class="subst">$&#123;bufferedRow&#125;</span>, &quot;</span>)</span><br><span class="line">      bufferedRowKey = bufferedKeyGenerator(bufferedRow)</span><br><span class="line">      foundRow = !bufferedRowKey.anyNull</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (!foundRow) &#123;</span><br><span class="line">      <span class="comment">// Add logs to identify the right table reading</span></span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> advancedBufferedToRowWithNullFreeJoinKey() not found Row, current is <span class="subst">$&#123;bufferedRow&#125;</span> ]\n&quot;</span>)</span><br><span class="line">      bufferedRow = <span class="literal">null</span></span><br><span class="line">      bufferedRowKey = <span class="literal">null</span></span><br><span class="line">      <span class="literal">false</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="comment">// Add logs to identify the right table reading</span></span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> advancedBufferedToRowWithNullFreeJoinKey() found Row, current is <span class="subst">$&#123;bufferedRow&#125;</span> ]\n&quot;</span>)</span><br><span class="line">      <span class="literal">true</span></span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="function"><span class="keyword">def</span> <span class="title">bufferMatchingRows</span></span>(): <span class="type">Unit</span> = &#123; <span class="comment">// This function do the actually &quot;link&quot; between left joined data and right joined data </span></span><br><span class="line">    assert(streamedRowKey != <span class="literal">null</span>)</span><br><span class="line">    assert(!streamedRowKey.anyNull)</span><br><span class="line">    assert(bufferedRowKey != <span class="literal">null</span>)</span><br><span class="line">    assert(!bufferedRowKey.anyNull)</span><br><span class="line">    assert(keyOrdering.compare(streamedRowKey, bufferedRowKey) == <span class="number">0</span>)</span><br><span class="line">    matchJoinKey = streamedRowKey.copy()</span><br><span class="line">    bufferedMatches.clear()</span><br><span class="line">    do &#123;</span><br><span class="line">      <span class="comment">// When left record and right record get joined, right record will be stored inside the bufferedRow</span></span><br><span class="line">      <span class="comment">// It will be re-iterated later</span></span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> bufferedMatches.add(bufferedRow.asInstanceOf[UnsafeRow])\n&quot;</span>)</span><br><span class="line">      bufferedMatches.add(bufferedRow.asInstanceOf[<span class="type">UnsafeRow</span>])</span><br><span class="line">      advancedBufferedToRowWithNullFreeJoinKey()</span><br><span class="line">    &#125; <span class="keyword">while</span> (bufferedRow != <span class="literal">null</span> &amp;&amp; keyOrdering.compare(streamedRowKey, bufferedRowKey) == <span class="number">0</span>)</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">LeftOuterIterator</span>(<span class="params"></span></span></span><br><span class="line"><span class="params"><span class="class">                                   smjScanner: <span class="type">SortMergeJoinScanner</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                   rightNullRow: <span class="type">InternalRow</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                   boundCondition: <span class="type">InternalRow</span> =&gt; <span class="type">Boolean</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                   resultProj: <span class="type">InternalRow</span> =&gt; <span class="type">InternalRow</span>,</span></span></span><br><span class="line"><span class="params"><span class="class">                                   numOutputRows: <span class="type">SQLMetric</span></span>)</span></span><br><span class="line">    <span class="keyword">extends</span> <span class="type">OneSideOuterIterator</span>(</span><br><span class="line">      smjScanner, rightNullRow, boundCondition, resultProj, numOutputRows) &#123;</span><br><span class="line">    <span class="comment">// We add a log here to verify that, 1. the LeftOuterJoin is activated</span></span><br><span class="line">    <span class="comment">// 2. Record the hashcode</span></span><br><span class="line">    print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> LeftOuterIterator init\n&quot;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">setStreamSideOutput</span></span>(row: <span class="type">InternalRow</span>): <span class="type">Unit</span> = joinedRow.withLeft(row)</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">setBufferedSideOutput</span></span>(row: <span class="type">InternalRow</span>): <span class="type">Unit</span> = joinedRow.withRight(row)</span><br><span class="line"></span><br><span class="line"><span class="comment">/*... Ignore some unchanged code ...*/</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">def</span> <span class="title">advanceStream</span></span>(): <span class="type">Boolean</span> = &#123;</span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> OneSideOuterIterator.advanceStream()\n&quot;</span>) <span class="comment">// This advanceStream() again, it is LeftOuterIterator&#x27;s advanceStream</span></span><br><span class="line">      rightMatchesIterator = <span class="literal">null</span></span><br><span class="line">      <span class="keyword">if</span> (smjScanner.findNextOuterJoinRows()) &#123;</span><br><span class="line">        setStreamSideOutput(smjScanner.getStreamedRow)</span><br><span class="line">        <span class="keyword">if</span> (smjScanner.getBufferedMatches.isEmpty) &#123;</span><br><span class="line">          setBufferedSideOutput(bufferedSideNullRow)</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">          <span class="comment">// Find the next row in the buffer that satisfied the bound condition</span></span><br><span class="line">          <span class="keyword">if</span> (!advanceBufferUntilBoundConditionSatisfied()) &#123;</span><br><span class="line">            setBufferedSideOutput(bufferedSideNullRow)</span><br><span class="line">          &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="literal">true</span></span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// Stream has been exhausted</span></span><br><span class="line">        <span class="literal">false</span></span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// This function will iterate the bufferMatches again, to make the real joined record and output them</span></span><br><span class="line">    <span class="keyword">private</span> <span class="function"><span class="keyword">def</span> <span class="title">advanceBufferUntilBoundConditionSatisfied</span></span>(): <span class="type">Boolean</span> = &#123; </span><br><span class="line">      <span class="comment">// Add log here to prove the advanceBufferUntilBoundConditionSatisfied will be called</span></span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> OneSideOuterIterator.advanceBufferUntilBoundConditionSatisfied()\n&quot;</span>)</span><br><span class="line">      <span class="keyword">var</span> foundMatch: <span class="type">Boolean</span> = <span class="literal">false</span></span><br><span class="line">      <span class="keyword">if</span> (rightMatchesIterator == <span class="literal">null</span>) &#123;</span><br><span class="line">        rightMatchesIterator = smjScanner.getBufferedMatches.generateIterator()</span><br><span class="line">        <span class="comment">// Add log here to see when it get the bufferMatches</span></span><br><span class="line">        print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> advanceBufferUntilBoundConditionSatisfied() arightMatchesIterator = smjScanner.getBufferedMatches.generateIterator() = <span class="subst">$&#123;rightMatchesIterator.hashCode()&#125;</span> \n&quot;</span>)</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">while</span> (!foundMatch &amp;&amp; rightMatchesIterator.hasNext) &#123;</span><br><span class="line">        setBufferedSideOutput(rightMatchesIterator.next())</span><br><span class="line">        <span class="keyword">val</span> nextMatch = rightMatchesIterator.next()</span><br><span class="line">        <span class="comment">// Add log here to see the content in bufferMatches, to prove that, bufferMatches stores the joined right table records</span></span><br><span class="line">        print(<span class="string">s&quot;rightMatchesIterator <span class="subst">$&#123;rightMatchesIterator.hashCode()&#125;</span> has <span class="subst">$&#123;nextMatch&#125;</span>&quot;</span>)</span><br><span class="line">        setBufferedSideOutput(nextMatch)</span><br><span class="line">        foundMatch = boundCondition(joinedRow)</span><br><span class="line">      &#125;</span><br><span class="line">      foundMatch</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// LeftOuterIterator&#x27;s advanceNext always try output the joined record first, then try to drive its advanceStream, then to drive SortMergeJoinScanner.findNextOuterJoinRows()</span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">advanceNext</span></span>(): <span class="type">Boolean</span> = &#123;</span><br><span class="line">      print(<span class="string">s&quot;<span class="subst">$&#123;this.hashCode()&#125;</span> OneSideOuterIterator.advanceNext()\n&quot;</span>)</span><br><span class="line">      <span class="keyword">val</span> r = advanceBufferUntilBoundConditionSatisfied() || advanceStream()</span><br><span class="line">      <span class="keyword">if</span> (r) numOutputRows += <span class="number">1</span></span><br><span class="line">      r</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">getRow</span></span>: <span class="type">InternalRow</span> = resultProj(joinedRow)</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></li>
+</ul>
+<h3 id="2-2-GitHub-ref-link"><a href="#2-2-GitHub-ref-link" class="headerlink" title="2.2 GitHub ref link"></a>2.2 GitHub ref link</h3><p>Please refer to this Commit:</p>
+<ul>
+<li><a target="_blank" rel="noopener" href="https://github.com/Solodye/spark/pull/1/commits/bec260a393d3ddb0d8a7abf8967d2209d021b96f?diff=unified&amp;w=0">https://github.com/Solodye/spark/pull/1/commits/bec260a393d3ddb0d8a7abf8967d2209d021b96f?diff=unified&amp;w=0</a></li>
+</ul>
+<h2 id="3-Run-and-analyze-the-log"><a href="#3-Run-and-analyze-the-log" class="headerlink" title="3. Run and analyze the log"></a>3. Run and analyze the log</h2><table>
+<thead>
+<tr>
+<th>left side log trace</th>
+<th>left side data visit</th>
+<th>left table partition x</th>
+<th>right table partition y</th>
+<th>right side data visit</th>
+<th>right side log trace</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>/* 2. Left #1 */</code></td>
+<td>LeftOuterIterator call its .advanceStream(), then drives findNextOuterJoinRows() call left table’s .advanceNext()</td>
+<td>1 -&gt; 1</td>
+<td>4 -&gt; 44</td>
+<td>1. advancedBufferedToRowWithNullFreeJoinKey() when SortMergeJoinScanner init <br/> 2. This record was iterated <strong>AGAIN</strong> inside the buffer</td>
+<td>1. <code>/* 1. Right #1 */</code>  <br/> 2. <code>/* 6. Right #1 */</code></td>
+</tr>
+<tr>
+<td><code>/* 3. Left #2 */</code></td>
+<td>After the 1st record cannot be joined, someone want to iterate again, so LeftOuterIterator’s advanceNext() was called, then left table’s advanceStream() also been called</td>
+<td>4 -&gt; 4</td>
+<td>4 -&gt; 45</td>
+<td>1. advancedBufferedToRowWithNullFreeJoinKey() when doing the join <br/>  2. This record was iterated <strong>AGAIN</strong> inside the buffer</td>
+<td>1. <code>/* 4. Right #2 */ </code> <br/>   2. <code>/* 7. Right #2 */</code></td>
+</tr>
+<tr>
+<td><code>/* 8. Left #3 */</code></td>
+<td>advancedStreamed(), then it hasn’t been joined</td>
+<td>8 -&gt; 8</td>
+<td>7 -&gt; 77</td>
+<td>advancedBufferedToRowWithNullFreeJoinKey() when doing the join, then it hasn’t been joined</td>
+<td><code>/* 5. Right #3 */</code></td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td></td>
+<td>10 -&gt; 1010</td>
+<td>advancedBufferedToRowWithNullFreeJoinKey(),  then it hasn’t been joined</td>
+<td><code>/* 9. Right #4 */ </code></td>
+</tr>
+</tbody></table>
+<table>
+<thead>
+<tr>
+<th>Object</th>
+<th>HashCode</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>SortMergeJoinScanner</td>
+<td>104408849</td>
+</tr>
+<tr>
+<td>LeftOuterIterator</td>
+<td>165384710</td>
+</tr>
+</tbody></table>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line">/home/yzruntime/.jdks/corretto-1.8.0_402/bin/java -javaagent:/opt/idea-IC-233.14475.28/lib/idea_rt.jar=42213:/opt/idea-IC-233.14475.28/bin -Dfile.encoding=UTF-8 -classpath /home/yzruntime/.local/share/JetBrains/IdeaIC2023.3/Scala/lib/runners.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/charsets.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/cldrdata.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/dnsns.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/jaccess.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/jfxrt.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/localedata.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/nashorn.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/sunec.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/sunjce_provider.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/sunpkcs11.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/ext/zipfs.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/jce.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/jfr.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/jfxswt.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/jsse.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/management-agent.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/resources.jar:/home/yzruntime/.jdks/corretto-1.8.0_402/jre/lib/rt.jar:/home/yzruntime/GitProjSrc/_forked_spark/spark/sql/core/target/scala-2.11/test-classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/sql/core/target/scala-2.11/classes:/home/yzruntime/.m2/repository/com/univocity/univocity-parsers/2.5.9/univocity-parsers-2.5.9.jar:/home/yzruntime/GitProjSrc/_forked_spark/spark/common/sketch/target/scala-2.11/classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/core/target/scala-2.11/classes:/home/yzruntime/.m2/repository/org/apache/avro/avro-mapred/1.7.7/avro-mapred-1.7.7-hadoop2.jar:/home/yzruntime/.m2/repository/org/apache/avro/avro-ipc/1.7.7/avro-ipc-1.7.7.jar:/home/yzruntime/.m2/repository/org/apache/avro/avro-ipc/1.7.7/avro-ipc-1.7.7-tests.jar:/home/yzruntime/.m2/repository/com/twitter/chill_2.11/0.8.4/chill_2.11-0.8.4.jar:/home/yzruntime/.m2/repository/com/twitter/chill-java/0.8.4/chill-java-0.8.4.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-client/2.6.5/hadoop-client-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-common/2.6.5/hadoop-common-2.6.5.jar:/home/yzruntime/.m2/repository/commons-cli/commons-cli/1.2/commons-cli-1.2.jar:/home/yzruntime/.m2/repository/xmlenc/xmlenc/0.52/xmlenc-0.52.jar:/home/yzruntime/.m2/repository/commons-httpclient/commons-httpclient/3.1/commons-httpclient-3.1.jar:/home/yzruntime/.m2/repository/commons-io/commons-io/2.4/commons-io-2.4.jar:/home/yzruntime/.m2/repository/commons-collections/commons-collections/3.2.2/commons-collections-3.2.2.jar:/home/yzruntime/.m2/repository/commons-configuration/commons-configuration/1.6/commons-configuration-1.6.jar:/home/yzruntime/.m2/repository/commons-digester/commons-digester/1.8/commons-digester-1.8.jar:/home/yzruntime/.m2/repository/commons-beanutils/commons-beanutils/1.7.0/commons-beanutils-1.7.0.jar:/home/yzruntime/.m2/repository/commons-beanutils/commons-beanutils-core/1.8.0/commons-beanutils-core-1.8.0.jar:/home/yzruntime/.m2/repository/com/google/code/gson/gson/2.2.4/gson-2.2.4.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-auth/2.6.5/hadoop-auth-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/directory/server/apacheds-kerberos-codec/2.0.0-M15/apacheds-kerberos-codec-2.0.0-M15.jar:/home/yzruntime/.m2/repository/org/apache/directory/server/apacheds-i18n/2.0.0-M15/apacheds-i18n-2.0.0-M15.jar:/home/yzruntime/.m2/repository/org/apache/directory/api/api-asn1-api/1.0.0-M20/api-asn1-api-1.0.0-M20.jar:/home/yzruntime/.m2/repository/org/apache/directory/api/api-util/1.0.0-M20/api-util-1.0.0-M20.jar:/home/yzruntime/.m2/repository/org/apache/curator/curator-client/2.6.0/curator-client-2.6.0.jar:/home/yzruntime/.m2/repository/org/htrace/htrace-core/3.0.4/htrace-core-3.0.4.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-hdfs/2.6.5/hadoop-hdfs-2.6.5.jar:/home/yzruntime/.m2/repository/org/mortbay/jetty/jetty-util/6.1.26/jetty-util-6.1.26.jar:/home/yzruntime/.m2/repository/xerces/xercesImpl/2.9.1/xercesImpl-2.9.1.jar:/home/yzruntime/.m2/repository/xml-apis/xml-apis/1.4.01/xml-apis-1.4.01.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-mapreduce-client-app/2.6.5/hadoop-mapreduce-client-app-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-mapreduce-client-common/2.6.5/hadoop-mapreduce-client-common-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-yarn-client/2.6.5/hadoop-yarn-client-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-yarn-server-common/2.6.5/hadoop-yarn-server-common-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-mapreduce-client-shuffle/2.6.5/hadoop-mapreduce-client-shuffle-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-yarn-api/2.6.5/hadoop-yarn-api-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-mapreduce-client-core/2.6.5/hadoop-mapreduce-client-core-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-yarn-common/2.6.5/hadoop-yarn-common-2.6.5.jar:/home/yzruntime/.m2/repository/javax/xml/bind/jaxb-api/2.2.2/jaxb-api-2.2.2.jar:/home/yzruntime/.m2/repository/javax/xml/stream/stax-api/1.0-2/stax-api-1.0-2.jar:/home/yzruntime/.m2/repository/org/codehaus/jackson/jackson-jaxrs/1.9.13/jackson-jaxrs-1.9.13.jar:/home/yzruntime/.m2/repository/org/codehaus/jackson/jackson-xc/1.9.13/jackson-xc-1.9.13.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-mapreduce-client-jobclient/2.6.5/hadoop-mapreduce-client-jobclient-2.6.5.jar:/home/yzruntime/.m2/repository/org/apache/hadoop/hadoop-annotations/2.6.5/hadoop-annotations-2.6.5.jar:/home/yzruntime/GitProjSrc/_forked_spark/spark/launcher/target/scala-2.11/classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/common/kvstore/target/scala-2.11/classes:/home/yzruntime/.m2/repository/org/fusesource/leveldbjni/leveldbjni-all/1.8/leveldbjni-all-1.8.jar:/home/yzruntime/GitProjSrc/_forked_spark/spark/common/network-common/target/scala-2.11/classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/common/network-shuffle/target/scala-2.11/classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/common/unsafe/target/scala-2.11/classes:/home/yzruntime/.m2/repository/net/java/dev/jets3t/jets3t/0.9.4/jets3t-0.9.4.jar:/home/yzruntime/.m2/repository/org/apache/httpcomponents/httpcore/4.4.8/httpcore-4.4.8.jar:/home/yzruntime/.m2/repository/org/apache/httpcomponents/httpclient/4.5.4/httpclient-4.5.4.jar:/home/yzruntime/.m2/repository/javax/activation/activation/1.1.1/activation-1.1.1.jar:/home/yzruntime/.m2/repository/org/bouncycastle/bcprov-jdk15on/1.58/bcprov-jdk15on-1.58.jar:/home/yzruntime/.m2/repository/com/jamesmurty/utils/java-xmlbuilder/1.1/java-xmlbuilder-1.1.jar:/home/yzruntime/.m2/repository/net/iharder/base64/2.3.8/base64-2.3.8.jar:/home/yzruntime/.m2/repository/org/apache/curator/curator-recipes/2.6.0/curator-recipes-2.6.0.jar:/home/yzruntime/.m2/repository/org/apache/curator/curator-framework/2.6.0/curator-framework-2.6.0.jar:/home/yzruntime/.m2/repository/org/apache/zookeeper/zookeeper/3.4.6/zookeeper-3.4.6.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-plus/9.3.24.v20180605/jetty-plus-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-webapp/9.3.24.v20180605/jetty-webapp-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-xml/9.3.24.v20180605/jetty-xml-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-jndi/9.3.24.v20180605/jetty-jndi-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-security/9.3.24.v20180605/jetty-security-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-util/9.3.24.v20180605/jetty-util-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-server/9.3.24.v20180605/jetty-server-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-io/9.3.24.v20180605/jetty-io-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-http/9.3.24.v20180605/jetty-http-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-continuation/9.3.24.v20180605/jetty-continuation-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-proxy/9.3.24.v20180605/jetty-proxy-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-client/9.3.24.v20180605/jetty-client-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-servlets/9.3.24.v20180605/jetty-servlets-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/javax/servlet/javax.servlet-api/3.1.0/javax.servlet-api-3.1.0.jar:/home/yzruntime/.m2/repository/org/apache/commons/commons-lang3/3.5/commons-lang3-3.5.jar:/home/yzruntime/.m2/repository/org/apache/commons/commons-math3/3.4.1/commons-math3-3.4.1.jar:/home/yzruntime/.m2/repository/com/google/code/findbugs/jsr305/1.3.9/jsr305-1.3.9.jar:/home/yzruntime/.m2/repository/org/slf4j/slf4j-api/1.7.16/slf4j-api-1.7.16.jar:/home/yzruntime/.m2/repository/org/slf4j/jul-to-slf4j/1.7.16/jul-to-slf4j-1.7.16.jar:/home/yzruntime/.m2/repository/org/slf4j/jcl-over-slf4j/1.7.16/jcl-over-slf4j-1.7.16.jar:/home/yzruntime/.m2/repository/log4j/log4j/1.2.17/log4j-1.2.17.jar:/home/yzruntime/.m2/repository/org/slf4j/slf4j-log4j12/1.7.16/slf4j-log4j12-1.7.16.jar:/home/yzruntime/.m2/repository/com/ning/compress-lzf/1.0.3/compress-lzf-1.0.3.jar:/home/yzruntime/.m2/repository/org/xerial/snappy/snappy-java/1.1.2.6/snappy-java-1.1.2.6.jar:/home/yzruntime/.m2/repository/org/lz4/lz4-java/1.4.0/lz4-java-1.4.0.jar:/home/yzruntime/.m2/repository/com/github/luben/zstd-jni/1.3.2-2/zstd-jni-1.3.2-2.jar:/home/yzruntime/.m2/repository/org/roaringbitmap/RoaringBitmap/0.7.45/RoaringBitmap-0.7.45.jar:/home/yzruntime/.m2/repository/org/roaringbitmap/shims/0.7.45/shims-0.7.45.jar:/home/yzruntime/.m2/repository/commons-net/commons-net/2.2/commons-net-2.2.jar:/home/yzruntime/.m2/repository/org/scala-lang/scala-library/2.11.8/scala-library-2.11.8.jar:/home/yzruntime/.m2/repository/org/json4s/json4s-jackson_2.11/3.2.11/json4s-jackson_2.11-3.2.11.jar:/home/yzruntime/.m2/repository/org/json4s/json4s-core_2.11/3.2.11/json4s-core_2.11-3.2.11.jar:/home/yzruntime/.m2/repository/org/json4s/json4s-ast_2.11/3.2.11/json4s-ast_2.11-3.2.11.jar:/home/yzruntime/.m2/repository/org/scala-lang/scalap/2.11.8/scalap-2.11.8.jar:/home/yzruntime/.m2/repository/org/scala-lang/scala-compiler/2.11.8/scala-compiler-2.11.8.jar:/home/yzruntime/.m2/repository/org/glassfish/jersey/core/jersey-client/2.22.2/jersey-client-2.22.2.jar:/home/yzruntime/.m2/repository/javax/ws/rs/javax.ws.rs-api/2.0.1/javax.ws.rs-api-2.0.1.jar:/home/yzruntime/.m2/repository/org/glassfish/hk2/hk2-api/2.4.0-b34/hk2-api-2.4.0-b34.jar:/home/yzruntime/.m2/repository/org/glassfish/hk2/hk2-utils/2.4.0-b34/hk2-utils-2.4.0-b34.jar:/home/yzruntime/.m2/repository/org/glassfish/hk2/external/aopalliance-repackaged/2.4.0-b34/aopalliance-repackaged-2.4.0-b34.jar:/home/yzruntime/.m2/repository/org/glassfish/hk2/external/javax.inject/2.4.0-b34/javax.inject-2.4.0-b34.jar:/home/yzruntime/.m2/repository/org/glassfish/hk2/hk2-locator/2.4.0-b34/hk2-locator-2.4.0-b34.jar:/home/yzruntime/.m2/repository/org/javassist/javassist/3.18.1-GA/javassist-3.18.1-GA.jar:/home/yzruntime/.m2/repository/org/glassfish/jersey/core/jersey-common/2.22.2/jersey-common-2.22.2.jar:/home/yzruntime/.m2/repository/javax/annotation/javax.annotation-api/1.2/javax.annotation-api-1.2.jar:/home/yzruntime/.m2/repository/org/glassfish/jersey/bundles/repackaged/jersey-guava/2.22.2/jersey-guava-2.22.2.jar:/home/yzruntime/.m2/repository/org/glassfish/hk2/osgi-resource-locator/1.0.1/osgi-resource-locator-1.0.1.jar:/home/yzruntime/.m2/repository/org/glassfish/jersey/core/jersey-server/2.22.2/jersey-server-2.22.2.jar:/home/yzruntime/.m2/repository/org/glassfish/jersey/media/jersey-media-jaxb/2.22.2/jersey-media-jaxb-2.22.2.jar:/home/yzruntime/.m2/repository/javax/validation/validation-api/1.1.0.Final/validation-api-1.1.0.Final.jar:/home/yzruntime/.m2/repository/org/glassfish/jersey/containers/jersey-container-servlet/2.22.2/jersey-container-servlet-2.22.2.jar:/home/yzruntime/.m2/repository/org/glassfish/jersey/containers/jersey-container-servlet-core/2.22.2/jersey-container-servlet-core-2.22.2.jar:/home/yzruntime/.m2/repository/io/netty/netty-all/4.1.17.Final/netty-all-4.1.17.Final.jar:/home/yzruntime/.m2/repository/io/netty/netty/3.9.9.Final/netty-3.9.9.Final.jar:/home/yzruntime/.m2/repository/com/clearspring/analytics/stream/2.7.0/stream-2.7.0.jar:/home/yzruntime/.m2/repository/io/dropwizard/metrics/metrics-core/3.1.5/metrics-core-3.1.5.jar:/home/yzruntime/.m2/repository/io/dropwizard/metrics/metrics-jvm/3.1.5/metrics-jvm-3.1.5.jar:/home/yzruntime/.m2/repository/io/dropwizard/metrics/metrics-json/3.1.5/metrics-json-3.1.5.jar:/home/yzruntime/.m2/repository/io/dropwizard/metrics/metrics-graphite/3.1.5/metrics-graphite-3.1.5.jar:/home/yzruntime/.m2/repository/com/fasterxml/jackson/module/jackson-module-scala_2.11/2.6.7.1/jackson-module-scala_2.11-2.6.7.1.jar:/home/yzruntime/.m2/repository/com/fasterxml/jackson/module/jackson-module-paranamer/2.7.9/jackson-module-paranamer-2.7.9.jar:/home/yzruntime/.m2/repository/org/apache/ivy/ivy/2.4.0/ivy-2.4.0.jar:/home/yzruntime/.m2/repository/oro/oro/2.0.8/oro-2.0.8.jar:/home/yzruntime/.m2/repository/net/razorvine/pyrolite/4.13/pyrolite-4.13.jar:/home/yzruntime/.m2/repository/net/sf/py4j/py4j/0.10.7/py4j-0.10.7.jar:/home/yzruntime/.m2/repository/org/apache/commons/commons-crypto/1.0.0/commons-crypto-1.0.0.jar:/home/yzruntime/GitProjSrc/_forked_spark/spark/core/target/scala-2.11/test-classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/sql/catalyst/target/scala-2.11/classes:/home/yzruntime/.m2/repository/org/scala-lang/scala-reflect/2.11.8/scala-reflect-2.11.8.jar:/home/yzruntime/.m2/repository/org/scala-lang/modules/scala-parser-combinators_2.11/1.0.4/scala-parser-combinators_2.11-1.0.4.jar:/home/yzruntime/.m2/repository/org/codehaus/janino/janino/3.0.8/janino-3.0.8.jar:/home/yzruntime/.m2/repository/org/codehaus/janino/commons-compiler/3.0.8/commons-compiler-3.0.8.jar:/home/yzruntime/.m2/repository/org/antlr/antlr4-runtime/4.7/antlr4-runtime-4.7.jar:/home/yzruntime/.m2/repository/commons-codec/commons-codec/1.10/commons-codec-1.10.jar:/home/yzruntime/GitProjSrc/_forked_spark/spark/sql/catalyst/target/scala-2.11/test-classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/common/tags/target/scala-2.11/classes:/home/yzruntime/GitProjSrc/_forked_spark/spark/common/tags/target/scala-2.11/test-classes:/home/yzruntime/.m2/repository/org/apache/orc/orc-core/1.4.4/orc-core-1.4.4-nohive.jar:/home/yzruntime/.m2/repository/com/google/protobuf/protobuf-java/2.5.0/protobuf-java-2.5.0.jar:/home/yzruntime/.m2/repository/commons-lang/commons-lang/2.6/commons-lang-2.6.jar:/home/yzruntime/.m2/repository/io/airlift/aircompressor/0.8/aircompressor-0.8.jar:/home/yzruntime/.m2/repository/org/apache/orc/orc-mapreduce/1.4.4/orc-mapreduce-1.4.4-nohive.jar:/home/yzruntime/.m2/repository/com/esotericsoftware/kryo-shaded/3.0.3/kryo-shaded-3.0.3.jar:/home/yzruntime/.m2/repository/com/esotericsoftware/minlog/1.3.0/minlog-1.3.0.jar:/home/yzruntime/.m2/repository/com/google/guava/guava/14.0.1/guava-14.0.1.jar:/home/yzruntime/.m2/repository/org/apache/parquet/parquet-column/1.8.3/parquet-column-1.8.3.jar:/home/yzruntime/.m2/repository/org/apache/parquet/parquet-common/1.8.3/parquet-common-1.8.3.jar:/home/yzruntime/.m2/repository/org/apache/parquet/parquet-encoding/1.8.3/parquet-encoding-1.8.3.jar:/home/yzruntime/.m2/repository/org/apache/parquet/parquet-hadoop/1.8.3/parquet-hadoop-1.8.3.jar:/home/yzruntime/.m2/repository/org/apache/parquet/parquet-format/2.3.1/parquet-format-2.3.1.jar:/home/yzruntime/.m2/repository/org/apache/parquet/parquet-jackson/1.8.3/parquet-jackson-1.8.3.jar:/home/yzruntime/.m2/repository/org/codehaus/jackson/jackson-mapper-asl/1.9.13/jackson-mapper-asl-1.9.13.jar:/home/yzruntime/.m2/repository/org/codehaus/jackson/jackson-core-asl/1.9.13/jackson-core-asl-1.9.13.jar:/home/yzruntime/.m2/repository/org/eclipse/jetty/jetty-servlet/9.3.24.v20180605/jetty-servlet-9.3.24.v20180605.jar:/home/yzruntime/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.6.7.1/jackson-databind-2.6.7.1.jar:/home/yzruntime/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.6.7/jackson-annotations-2.6.7.jar:/home/yzruntime/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.6.7/jackson-core-2.6.7.jar:/home/yzruntime/.m2/repository/org/apache/arrow/arrow-vector/0.8.0/arrow-vector-0.8.0.jar:/home/yzruntime/.m2/repository/org/apache/arrow/arrow-format/0.8.0/arrow-format-0.8.0.jar:/home/yzruntime/.m2/repository/org/apache/arrow/arrow-memory/0.8.0/arrow-memory-0.8.0.jar:/home/yzruntime/.m2/repository/joda-time/joda-time/2.9.3/joda-time-2.9.3.jar:/home/yzruntime/.m2/repository/com/carrotsearch/hppc/0.7.2/hppc-0.7.2.jar:/home/yzruntime/.m2/repository/com/vlkan/flatbuffers/1.2.0-3f79e055/flatbuffers-1.2.0-3f79e055.jar:/home/yzruntime/.m2/repository/org/apache/xbean/xbean-asm5-shaded/4.4/xbean-asm5-shaded-4.4.jar:/home/yzruntime/.m2/repository/org/scalacheck/scalacheck_2.11/1.13.5/scalacheck_2.11-1.13.5.jar:/home/yzruntime/.m2/repository/org/scala-sbt/test-interface/1.0/test-interface-1.0.jar:/home/yzruntime/.m2/repository/com/h2database/h2/1.4.195/h2-1.4.195.jar:/home/yzruntime/.m2/repository/mysql/mysql-connector-java/5.1.38/mysql-connector-java-5.1.38.jar:/home/yzruntime/.m2/repository/org/postgresql/postgresql/9.4.1207.jre7/postgresql-9.4.1207.jre7.jar:/home/yzruntime/.m2/repository/org/apache/parquet/parquet-avro/1.8.3/parquet-avro-1.8.3.jar:/home/yzruntime/.m2/repository/it/unimi/dsi/fastutil/6.5.7/fastutil-6.5.7.jar:/home/yzruntime/.m2/repository/org/apache/avro/avro/1.8.1/avro-1.8.1.jar:/home/yzruntime/.m2/repository/com/thoughtworks/paranamer/paranamer/2.8/paranamer-2.8.jar:/home/yzruntime/.m2/repository/org/apache/commons/commons-compress/1.8.1/commons-compress-1.8.1.jar:/home/yzruntime/.m2/repository/org/tukaani/xz/1.5/xz-1.5.jar:/home/yzruntime/.m2/repository/org/mockito/mockito-core/1.10.19/mockito-core-1.10.19.jar:/home/yzruntime/.m2/repository/org/hamcrest/hamcrest-core/1.3/hamcrest-core-1.3.jar:/home/yzruntime/.m2/repository/org/objenesis/objenesis/2.1/objenesis-2.1.jar:/home/yzruntime/.m2/repository/org/spark-project/spark/unused/1.0.0/unused-1.0.0.jar:/home/yzruntime/.m2/repository/org/scalatest/scalatest_2.11/3.0.3/scalatest_2.11-3.0.3.jar:/home/yzruntime/.m2/repository/org/scalactic/scalactic_2.11/3.0.3/scalactic_2.11-3.0.3.jar:/home/yzruntime/.m2/repository/org/scala-lang/modules/scala-xml_2.11/1.0.5/scala-xml_2.11-1.0.5.jar:/home/yzruntime/.m2/repository/junit/junit/4.12/junit-4.12.jar:/home/yzruntime/.m2/repository/com/novocode/junit-interface/0.11/junit-interface-0.11.jar org.jetbrains.plugins.scala.testingSupport.scalaTest.ScalaTestRunner -s org.apache.spark.sql.DataFrameSuite -testName &quot;SPARK-20897: cached self-join should not fail&quot; -showProgressMessages true</span><br><span class="line">Testing started at 4:35 pm ...</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">01:35:55.103 WARN org.apache.spark.util.Utils: Your hostname, yzhost resolves to a loopback address: 127.0.1.1; using 192.168.50.125 instead (on interface wlp5s0)</span><br><span class="line">01:35:55.104 WARN org.apache.spark.util.Utils: Set SPARK_LOCAL_IP if you need to bind to another address</span><br><span class="line">01:35:55.262 WARN org.apache.hadoop.util.NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable</span><br><span class="line"></span><br><span class="line">== Physical Plan ==</span><br><span class="line">SortMergeJoin [i#5], [i#16], LeftOuter</span><br><span class="line">:- Sort [i#5 ASC NULLS FIRST], false, 0</span><br><span class="line">:  +- Coalesce 1</span><br><span class="line">:     +- LocalTableScan [i#5, j#6]</span><br><span class="line">+- Sort [i#16 ASC NULLS FIRST], false, 0</span><br><span class="line">   +- Coalesce 1</span><br><span class="line">      +- LocalTableScan [i#16, j#17]</span><br><span class="line">104408849 SortMergeJoinScanner init</span><br><span class="line">/* 1. Right #1 */ 104408849 [advancedBufferedToRowWithNullFreeJoinKey() bufferedRow in while: [0,4,44], 104408849 advancedBufferedToRowWithNullFreeJoinKey() found Row, current is [0,4,44] ] </span><br><span class="line">LeftOuter init in SparkPlan</span><br><span class="line">165384710 LeftOuterIterator init</span><br><span class="line">165384710 OneSideOuterIterator.advanceNext()</span><br><span class="line">165384710 OneSideOuterIterator.advanceBufferUntilBoundConditionSatisfied()</span><br><span class="line">165384710 advanceBufferUntilBoundConditionSatisfied() arightMatchesIterator = smjScanner.getBufferedMatches.generateIterator() = 1252938438 </span><br><span class="line">165384710 OneSideOuterIterator.advanceStream()</span><br><span class="line">findNextOuterJoinRows() </span><br><span class="line">/* 2. Left #1 */ 104408849 advancedStreamed() streamedIter.advanceNext()=true streamedRow: [0,1,1]</span><br><span class="line">165384710 OneSideOuterIterator.advanceNext()</span><br><span class="line">165384710 OneSideOuterIterator.advanceBufferUntilBoundConditionSatisfied()</span><br><span class="line">165384710 advanceBufferUntilBoundConditionSatisfied() arightMatchesIterator = smjScanner.getBufferedMatches.generateIterator() = 2135241262 </span><br><span class="line">165384710 OneSideOuterIterator.advanceStream()</span><br><span class="line">findNextOuterJoinRows() </span><br><span class="line">/* 3. Left #2 */ 104408849 advancedStreamed() streamedIter.advanceNext()=true streamedRow: [0,4,4]</span><br><span class="line">/* 3.1 Right #1 got joined, then it was put inside the buffer */ 104408849 bufferedMatches.add(bufferedRow.asInstanceOf[UnsafeRow])</span><br><span class="line">/* 4. Right #2 */ 104408849 [advancedBufferedToRowWithNullFreeJoinKey() bufferedRow in while: [0,4,45], 104408849 advancedBufferedToRowWithNullFreeJoinKey() found Row, current is [0,4,45] ]</span><br><span class="line">* 4.1 Right #2 got joined, then it was put inside the buffer */ 104408849 bufferedMatches.add(bufferedRow.asInstanceOf[UnsafeRow])</span><br><span class="line">/* 5. Right #3 */ 104408849 [advancedBufferedToRowWithNullFreeJoinKey() bufferedRow in while: [0,7,77], 104408849 advancedBufferedToRowWithNullFreeJoinKey() found Row, current is [0,7,77] ]</span><br><span class="line">165384710 OneSideOuterIterator.advanceBufferUntilBoundConditionSatisfied()</span><br><span class="line">165384710 advanceBufferUntilBoundConditionSatisfied() arightMatchesIterator = smjScanner.getBufferedMatches.generateIterator() = 1621560499 </span><br><span class="line">/* 6. Right #1 */ rightMatchesIterator 1621560499 has [0,4,44]165384710 OneSideOuterIterator.advanceNext()</span><br><span class="line">165384710 OneSideOuterIterator.advanceBufferUntilBoundConditionSatisfied()</span><br><span class="line">/* 7. Right #2 */ rightMatchesIterator 1621560499 has [0,4,45]165384710 OneSideOuterIterator.advanceNext()</span><br><span class="line">165384710 OneSideOuterIterator.advanceBufferUntilBoundConditionSatisfied()</span><br><span class="line">165384710 OneSideOuterIterator.advanceStream()</span><br><span class="line">findNextOuterJoinRows() </span><br><span class="line">/* 8. Left #3 */ 104408849 advancedStreamed() streamedIter.advanceNext()=true streamedRow: [0,8,8]</span><br><span class="line">/* 9. Right #4 */ 104408849 [advancedBufferedToRowWithNullFreeJoinKey() bufferedRow in while: [0,10,1010], 104408849 advancedBufferedToRowWithNullFreeJoinKey() found Row, current is [0,10,1010] ]</span><br><span class="line">165384710 OneSideOuterIterator.advanceNext()</span><br><span class="line">165384710 OneSideOuterIterator.advanceBufferUntilBoundConditionSatisfied()</span><br><span class="line">165384710 advanceBufferUntilBoundConditionSatisfied() arightMatchesIterator = smjScanner.getBufferedMatches.generateIterator() = 2010570488 </span><br><span class="line">165384710 OneSideOuterIterator.advanceStream()</span><br><span class="line">findNextOuterJoinRows() </span><br><span class="line">104408849 advancedStreamed() streamedIter.advanceNext()=false streamedRow: null</span><br><span class="line">+---+---+----+----+</span><br><span class="line">|i  |j  |i   |j   |</span><br><span class="line">+---+---+----+----+</span><br><span class="line">|1  |1  |null|null|</span><br><span class="line">|4  |4  |4   |68  |</span><br><span class="line">|4  |4  |4   |69  |</span><br><span class="line">|8  |8  |null|null|</span><br><span class="line">+---+---+----+----+</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Process finished with exit code 0</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h1 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h1><ul>
+<li><a target="_blank" rel="noopener" href="https://www.waitingforcode.com/apache-spark-sql/regression-tests-apache-spark-sql-joins/read">https://www.waitingforcode.com/apache-spark-sql/regression-tests-apache-spark-sql-joins/read</a></li>
+<li><a target="_blank" rel="noopener" href="https://use-the-index-luke.com/sql/join/sort-merge-join">https://use-the-index-luke.com/sql/join/sort-merge-join</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.waitingforcode.com/apache-spark-sql/sort-merge-join-spark-sql/read#sort-merge_join_in_spark_sql">https://www.waitingforcode.com/apache-spark-sql/sort-merge-join-spark-sql/read#sort-merge_join_in_spark_sql</a></li>
+<li>Spark SQL内核剖析– 朱锋，张韶全，黄明</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/07/06/Learning-Spanish/" rel="prev" title="Learning Spanish at Spain">
+                  <i class="fa fa-angle-left"></i> Learning Spanish at Spain
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder"></span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
