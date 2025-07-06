@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 5.4.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha256-wiz7ZSCn/btzhjKDQBms9Hx4sSeUYsDrTLg7roPstac=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.19.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"style":null,"show_result":false},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="Spring Batch 4.10 ThottleLimit Causing Deadlock on ThreadPoolExecutorFactsIn Spring Batch 4.10,  The ThottleLimit control roughtly how many task been submitted to the Executor in parallel, before wait">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Spring Batch 5.1.0 ThottleLimit Causing Deadlock on ThreadPoolExecutor">
+<meta property="og:url" content="http://example.com/2025/07/06/Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor/index.html">
+<meta property="og:site_name" content="YzRuntime&#39;s blog">
+<meta property="og:description" content="Spring Batch 4.10 ThottleLimit Causing Deadlock on ThreadPoolExecutorFactsIn Spring Batch 4.10,  The ThottleLimit control roughtly how many task been submitted to the Executor in parallel, before wait">
+<meta property="og:locale" content="en_US">
+<meta property="article:published_time" content="2025-07-06T11:10:58.000Z">
+<meta property="article:modified_time" content="2025-07-06T11:16:34.460Z">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="Big data">
+<meta name="twitter:card" content="summary">
+
+
+<link rel="canonical" href="http://example.com/2025/07/06/Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/07/06/Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor/","path":"2025/07/06/Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor/","title":"Spring Batch 5.1.0 ThottleLimit Causing Deadlock on ThreadPoolExecutor"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Spring Batch 5.1.0 ThottleLimit Causing Deadlock on ThreadPoolExecutor | YzRuntime's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">YzRuntime's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor"><span class="nav-number">1.</span> <span class="nav-text">Spring Batch 4.10 ThottleLimit Causing Deadlock on ThreadPoolExecutor</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Facts"><span class="nav-number">1.1.</span> <span class="nav-text">Facts</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Adviced-practice"><span class="nav-number">1.2.</span> <span class="nav-text">Adviced practice</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Details"><span class="nav-number">1.3.</span> <span class="nav-text">Details</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Testing-DeadLock-when-Spring-Batch-submit-more-task-than-CorePoolSize-with-ThreadPoolExecutor-AbortPolicy"><span class="nav-number">1.3.1.</span> <span class="nav-text">1. Testing: DeadLock when Spring Batch submit more task than CorePoolSize, with ThreadPoolExecutor + AbortPolicy</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-1-Source-code-branch"><span class="nav-number">1.3.1.1.</span> <span class="nav-text">1.1 Source code branch</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-2-Source-code-change"><span class="nav-number">1.3.1.2.</span> <span class="nav-text">1.2 Source code change</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-3-Running-phenomenon"><span class="nav-number">1.3.1.3.</span> <span class="nav-text">1.3 Running phenomenon</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-4-Running-explanation"><span class="nav-number">1.3.1.4.</span> <span class="nav-text">1.4 Running explanation</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Source-code-hint-of-untrustworthy-ThottleLimit"><span class="nav-number">1.3.2.</span> <span class="nav-text">2. Source code hint of untrustworthy ThottleLimit</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-Change-to-CallerRunPolicy"><span class="nav-number">1.3.3.</span> <span class="nav-text">3. Change to CallerRunPolicy</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#3-1-Source-code-branch"><span class="nav-number">1.3.3.1.</span> <span class="nav-text">3.1 Source code branch</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#3-2-Source-code-change"><span class="nav-number">1.3.3.2.</span> <span class="nav-text">3.2 Source code change</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Important-conceptions-TBD"><span class="nav-number">1.4.</span> <span class="nav-text">Important conceptions (TBD)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#RepeatOperator"><span class="nav-number">1.4.1.</span> <span class="nav-text">RepeatOperator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Internal-queue-for-storaging-the-result"><span class="nav-number">1.4.2.</span> <span class="nav-text">Internal queue for storaging the result</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#How-a-Reader-Processor-Writer-to-be-wrapped-into-the-RepearOperator"><span class="nav-number">1.4.3.</span> <span class="nav-text">How a Reader - Processor - Writer to be wrapped into the RepearOperator</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Overall-task-submittion-TBD"><span class="nav-number">1.5.</span> <span class="nav-text">Overall task submittion (TBD)</span></a></li></ol></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/07/06/Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Spring Batch 5.1.0 ThottleLimit Causing Deadlock on ThreadPoolExecutor | YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Spring Batch 5.1.0 ThottleLimit Causing Deadlock on ThreadPoolExecutor
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+      
+
+      <time title="Created: 2025-07-06 19:10:58 / Modified: 19:16:34" itemprop="dateCreated datePublished" datetime="2025-07-06T19:10:58+08:00">2025-07-06</time>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h1 id="Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor"><a href="#Spring-Batch-4-10-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor" class="headerlink" title="Spring Batch 4.10 ThottleLimit Causing Deadlock on ThreadPoolExecutor"></a>Spring Batch 4.10 ThottleLimit Causing Deadlock on ThreadPoolExecutor</h1><h2 id="Facts"><a href="#Facts" class="headerlink" title="Facts"></a>Facts</h2><p>In Spring Batch 4.10,</p>
+<ol>
+<li>The ThottleLimit control roughtly how many task been submitted to the Executor in parallel, before waiting the result.</li>
+<li>The ThottleLimit can be compromized, which means the actual submittion may more than ThottleLimit</li>
+<li>When we use ThreadPoolExecutor + AbortPolicy (by default) and Spring Batch submit more task to trigger the ThreadPoolExecutor rejecting the task,<ol>
+<li>Spring Batch won’t submit it again.</li>
+<li>Except output an error log, Spring Batch won’t provide any feedback to user.</li>
+<li>Spring Batch will still wait the task result from an failed submitted task, this can lock the whole process except the running subthread.</li>
+</ol>
+</li>
+</ol>
+<h2 id="Adviced-practice"><a href="#Adviced-practice" class="headerlink" title="Adviced practice"></a>Adviced practice</h2><ol>
+<li>When using ThreadPoolExecutor + AbortPolicy (by default) ThrottleLimit need to be far less than ThreadPoolExecutor CorePoolSize.</li>
+<li>When letting ThottleLimit &gt;= CorePoolSize, we have to use ThreadPoolExecutor’s CallerRunsPolicy to make sure the task submitting behaviour is backpressured, letting Spring Batch wait the correct number of the process. </li>
+</ol>
+<h2 id="Details"><a href="#Details" class="headerlink" title="Details"></a>Details</h2><p>We can use the Spring official example to reproduce following situations: </p>
+<h3 id="1-Testing-DeadLock-when-Spring-Batch-submit-more-task-than-CorePoolSize-with-ThreadPoolExecutor-AbortPolicy"><a href="#1-Testing-DeadLock-when-Spring-Batch-submit-more-task-than-CorePoolSize-with-ThreadPoolExecutor-AbortPolicy" class="headerlink" title="1. Testing: DeadLock when Spring Batch submit more task than CorePoolSize, with ThreadPoolExecutor + AbortPolicy"></a>1. Testing: DeadLock when Spring Batch submit more task than CorePoolSize, with ThreadPoolExecutor + AbortPolicy</h3><h4 id="1-1-Source-code-branch"><a href="#1-1-Source-code-branch" class="headerlink" title="1.1 Source code branch"></a>1.1 Source code branch</h4><p><a target="_blank" rel="noopener" href="https://github.com/Solodye/spring-batch/tree/test/v5.1.0/deadlock-when-spring-batch-submit-more-task-than-core-pool-size">test/v5.1.0/deadlock-when-spring-batch-submit-more-task-than-core-pool-size</a>.</p>
+<h4 id="1-2-Source-code-change"><a href="#1-2-Source-code-change" class="headerlink" title="1.2 Source code change"></a>1.2 Source code change</h4><p>Setting up the ThreadPoolExecutor like <a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-batch/commit/d6ce16cee1bc5a8d09a3a73f8023884edc77261b#diff-fd68889e30cb9c170db4da81237c216ff67b115edc4dcdc69ad464d2dff7d186R70-R79">this</a>:</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Bean</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ThreadPoolTaskExecutor <span class="title">threadPoolTaskExecutor</span><span class="params">()</span></span>&#123;</span><br><span class="line">    ThreadPoolTaskExecutor threadPoolTaskExecutor = <span class="keyword">new</span> ThreadPoolTaskExecutor();</span><br><span class="line">    threadPoolTaskExecutor.setCorePoolSize(<span class="number">2</span>);</span><br><span class="line">    threadPoolTaskExecutor.setMaxPoolSize(<span class="number">3</span>);</span><br><span class="line">    threadPoolTaskExecutor.setQueueCapacity(<span class="number">1</span>);</span><br><span class="line">    threadPoolTaskExecutor.setDaemon(<span class="keyword">true</span>);</span><br><span class="line">    threadPoolTaskExecutor.initialize();</span><br><span class="line">    <span class="keyword">return</span> threadPoolTaskExecutor;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>While we set <a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-batch/commit/d6ce16cee1bc5a8d09a3a73f8023884edc77261b#diff-fd68889e30cb9c170db4da81237c216ff67b115edc4dcdc69ad464d2dff7d186R64-R65">thottleLimit = 8 &gt; MaxPoolSize + QueueCapacity = 4</a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">.taskExecutor(threadPoolTaskExecutor())</span><br><span class="line">.throttleLimit(<span class="number">8</span>)</span><br></pre></td></tr></table></figure>
+<h4 id="1-3-Running-phenomenon"><a href="#1-3-Running-phenomenon" class="headerlink" title="1.3 Running phenomenon"></a>1.3 Running phenomenon</h4><p>It will output a the following log and <strong>stuck there</strong></p>
+<details open>
+  <summary>See log detail</summary>
+  
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line">2025-07-06 17:59:54 INFO  [main] BatchRegistrar:70 - Finished Spring Batch infrastructure beans configuration in 0 ms.</span><br><span class="line">2025-07-06 17:59:54 WARN  [main] PostProcessorRegistrationDelegate$BeanPostProcessorChecker:437 - Bean &#x27;jobRegistry&#x27; of type [org.springframework.batch.core.configuration.support.MapJobRegistry] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [jobRegistryBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.</span><br><span class="line">2025-07-06 17:59:54 INFO  [main] EmbeddedDatabaseFactory:189 - Starting embedded database: url=&#x27;jdbc:hsqldb:mem:d99a2b92-7e2d-4b5d-87a8-30a2855a354b&#x27;, username=&#x27;sa&#x27;</span><br><span class="line">2025-07-06 17:59:54 INFO  [main] JobRepositoryFactoryBean:274 - No database type set, using meta data indicating: HSQL</span><br><span class="line">2025-07-06 17:59:54 INFO  [main] TaskExecutorRepeatTemplate:79 - Set throttleLimit to 8</span><br><span class="line">2025-07-06 17:59:54 INFO  [main] BatchObservabilityBeanPostProcessor:62 - No Micrometer observation registry found, defaulting to ObservationRegistry.NOOP</span><br><span class="line">2025-07-06 17:59:54 INFO  [main] SimpleJobLauncher:232 - No TaskExecutor has been set, defaulting to synchronous executor.</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] SimpleJobLauncher:154 - Job: [SimpleJob: [name=ioSampleJob]] launched with the following parameters: [&#123;&#x27;inputFile&#x27;:&#x27;&#123;value=org/springframework/batch/samples/file/delimited/data/delimited.csv, type=class java.lang.String, identifying=true&#125;&#x27;,&#x27;outputFile&#x27;:&#x27;&#123;value=file:./target/test-outputs/delimitedOutput.csv, type=class java.lang.String, identifying=true&#125;&#x27;&#125;]</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] SimpleStepHandler:150 - Executing step: [step1]</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">Thread main is setting throtleLimit 8 to ResultHolderResultQueue</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:298 - Handling exception: org.springframework.core.task.TaskRejectedException, caused by: org.springframework.core.task.TaskRejectedException: ExecutorService in active state did not accept task: org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@c4d2c44</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:162 - Entering waitForResults</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:176 - Running queue.take()</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] FlatFileItemReader:188 - Reading customer3,30</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] FlatFileItemReader:188 - Reading customer2,20</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] FlatFileItemReader:188 - Reading customer1,10</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] FlatFileItemReader:188 - Reading customer6,60</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] FlatFileItemReader:188 - Reading customer5,50</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] FlatFileItemReader:188 - Reading customer4,40</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:383 - Entering no-op waitForResults</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:383 - Entering no-op waitForResults</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:383 - Entering no-op waitForResults</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:229 - Get result CONTINUABLE</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:229 - Get result CONTINUABLE</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:229 - Get result CONTINUABLE</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:149 - Quit RepeatStatus.iterate</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:149 - Quit RepeatStatus.iterate</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:149 - Quit RepeatStatus.iterate</span><br><span class="line">2025-07-06 17:59:55 WARN  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:276 - run method got error Conversion = &#x27; &#x27;</span><br><span class="line">2025-07-06 17:59:55 WARN  [threadPoolTaskExecutor-2] TaskExecutorRepeatTemplate:276 - run method got error Conversion = &#x27; &#x27;</span><br><span class="line">2025-07-06 17:59:55 WARN  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:276 - run method got error Conversion = &#x27; &#x27;</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@2c6cfb64</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@6802dc5f</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@7e8cc5f8</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] ResultHolderResultQueue:138 - Queue size before take: 1</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] ResultHolderResultQueue:139 - Take value: isContinuable = false</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] ResultHolderResultQueue:140 - Queue size after take: 2</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-2] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] ResultHolderResultQueue:150 - Enter in waiting, count = 5 , queue.size() = 3</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:272 - run method end try</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@27a5151b</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] ResultHolderResultQueue:154 - Wake up, count = 5 , queue.size() = 4</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] ResultHolderResultQueue:150 - Enter in waiting, count = 5 , queue.size() = 4</span><br></pre></td></tr></table></figure>
+</details>
+
+<details>
+ <summary>Another log detail</summary>
+
+ <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br></pre></td><td class="code"><pre><span class="line"> 2025-07-06 19:03:56 INFO  [main] BatchRegistrar:70 - Finished Spring Batch infrastructure beans configuration in 0 ms.</span><br><span class="line">2025-07-06 19:03:56 WARN  [main] PostProcessorRegistrationDelegate$BeanPostProcessorChecker:437 - Bean &#x27;jobRegistry&#x27; of type [org.springframework.batch.core.configuration.support.MapJobRegistry] is not eligible for getting processed by all BeanPostProcessors (for example: not eligible for auto-proxying). Is this bean getting eagerly injected into a currently created BeanPostProcessor [jobRegistryBeanPostProcessor]? Check the corresponding BeanPostProcessor declaration and its dependencies.</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] EmbeddedDatabaseFactory:189 - Starting embedded database: url=&#x27;jdbc:hsqldb:mem:51832490-316a-4a89-b4cc-57683b46885a&#x27;, username=&#x27;sa&#x27;</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] JobRepositoryFactoryBean:274 - No database type set, using meta data indicating: HSQL</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:79 - Set throttleLimit to 8</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] BatchObservabilityBeanPostProcessor:62 - No Micrometer observation registry found, defaulting to ObservationRegistry.NOOP</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] SimpleJobLauncher:232 - No TaskExecutor has been set, defaulting to synchronous executor.</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] SimpleJobLauncher:154 - Job: [SimpleJob: [name=ioSampleJob]] launched with the following parameters: [&#123;&#x27;inputFile&#x27;:&#x27;&#123;value=org/springframework/batch/samples/file/delimited/data/delimited.csv, type=class java.lang.String, identifying=true&#125;&#x27;,&#x27;outputFile&#x27;:&#x27;&#123;value=file:./target/test-outputs/delimitedOutput.csv, type=class java.lang.String, identifying=true&#125;&#x27;&#125;]</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] SimpleStepHandler:150 - Executing step: [step1]</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">Thread main is setting throtleLimit 8 to ResultHolderResultQueue</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:129 - Done submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:298 - Handling exception: org.springframework.core.task.TaskRejectedException, caused by: org.springframework.core.task.TaskRejectedException: ExecutorService in active state did not accept task: org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@c4d2c44</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:162 - Entering waitForResults</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:176 - Running queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:137 - Queue size before take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] FlatFileItemReader:188 - Reading customer1,10</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] FlatFileItemReader:188 - Reading customer3,30</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] FlatFileItemReader:188 - Reading customer2,20</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] FlatFileItemReader:188 - Reading customer5,50</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] FlatFileItemReader:188 - Reading customer4,40</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] FlatFileItemReader:188 - Reading customer6,60</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:383 - Entering no-op waitForResults</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:383 - Entering no-op waitForResults</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:383 - Entering no-op waitForResults</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:229 - Get result CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:229 - Get result CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:229 - Get result CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] RepeatTemplate:149 - Quit RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] RepeatTemplate:149 - Quit RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:149 - Quit RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer1, credit=15] </span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer2, credit=25] </span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer3, credit=35] </span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer5, credit=55] </span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer6, credit=65] </span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer4, credit=45] </span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:272 - run method end try</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@1635497b</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:139 - Take value: isContinuable = true</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:140 - Queue size after take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:143 - Before count -- : 5</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:145 - After count -- : 4</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:178 - Get org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@1635497b from queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:192 - Result status</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] TaskExecutorRepeatTemplate:272 - run method end try</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:176 - Running queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@62c14c4b</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:137 - Queue size before take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:139 - Take value: isContinuable = true</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:140 - Queue size after take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:143 - Before count -- : 4</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:145 - After count -- : 3</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:133 - Entering RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:161 - RepeatStatus.executeInternal</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:178 - Get org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@62c14c4b from queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:192 - Result status</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-2] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] FlatFileItemReader:188 - Reading customer7,10</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:176 - Running queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:137 - Queue size before take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:272 - run method end try</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] FlatFileItemReader:188 - Reading customer8,20</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@77723a53</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:139 - Take value: isContinuable = true</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:140 - Queue size after take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:224 - result is CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:143 - Before count -- : 3</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:383 - Entering no-op waitForResults</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:145 - After count -- : 2</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:229 - Get result CONTINUABLE</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:178 - Get org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@77723a53 from queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] RepeatTemplate:149 - Quit RepeatStatus.iterate</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-1] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:192 - Result status</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:176 - Running queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer7, credit=15] </span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:137 - Queue size before take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] AbstractFileItemWriter:76 - Writing CustomerCredit [id=0,name=customer8, credit=25] </span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:272 - run method end try</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] ResultHolderResultQueue:99 - Put this in queue org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@70eedc13</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:139 - Take value: isContinuable = true</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:140 - Queue size after take: 0</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:143 - Before count -- : 2</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:145 - After count -- : 1</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:178 - Get org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@70eedc13 from queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] ResultHolderResultQueue:105 - Notify all</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:192 - Result status</span><br><span class="line">2025-07-06 19:03:56 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:285 - run method end finally</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] TaskExecutorRepeatTemplate:176 - Running queue.take()</span><br><span class="line">2025-07-06 19:03:56 INFO  [main] ResultHolderResultQueue:137 - Queue size before take: 0</span><br></pre></td></tr></table></figure>
+</details>
+
+
+<h4 id="1-4-Running-explanation"><a href="#1-4-Running-explanation" class="headerlink" title="1.4 Running explanation"></a>1.4 Running explanation</h4><ol>
+<li>Main thread goes to TaskExecutorRepeatTemplate</li>
+<li>Main thread submit 4 times task, see <code>TaskExecutorRepeatTemplate</code></li>
+<li>When reached the 5th task, <strong>it goes error due to ThreadPool raised TaskRejectedException, but Spring Batch did nothing</strong>. <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:127 - Submitting jobs org.springframework.batch.core.step.tasklet.TaskletStep$2@2ee39e73</span><br><span class="line">2025-07-06 17:59:55 INFO  [threadPoolTaskExecutor-3] TaskExecutorRepeatTemplate:259 - run method start</span><br><span class="line">2025-07-06 17:59:55 INFO  [main] TaskExecutorRepeatTemplate:298 - Handling exception: org.springframework.core.task.TaskRejectedException, caused by: org.springframework.core.task.TaskRejectedException: ExecutorService in active state did not accept task: org.springframework.batch.repeat.support.TaskExecutorRepeatTemplate$ExecutingRunnable@c4d2c44</span><br></pre></td></tr></table></figure></li>
+<li>Main thread goes in running queue.take() and stay in waiting</li>
+<li>Main thread was waked up due to other three finished thread runs notifyAll()</li>
+<li>Main thread expecting 5 result to arrive, currently only 4. It went into waiting or taking then no thread wakes it up.</li>
+</ol>
+<h3 id="2-Source-code-hint-of-untrustworthy-ThottleLimit"><a href="#2-Source-code-hint-of-untrustworthy-ThottleLimit" class="headerlink" title="2. Source code hint of untrustworthy ThottleLimit"></a>2. <a target="_blank" rel="noopener" href="https://github.com/spring-projects/spring-batch/blob/v5.1.0/spring-batch-infrastructure/src/main/java/org/springframework/batch/repeat/support/TaskExecutorRepeatTemplate.java#L63-L79">Source code hint of untrustworthy ThottleLimit</a></h3><p>It sais: when used with a thread pooled TaskExecutor the thread pool might prevent the throttle limit actually being reached (<strong>so make the core pool size larger than the throttle limit if possible</strong>).</p>
+<p>Actually we can also adjust the rejection policy to CallerRunPolicy.</p>
+<h3 id="3-Change-to-CallerRunPolicy"><a href="#3-Change-to-CallerRunPolicy" class="headerlink" title="3. Change to CallerRunPolicy"></a>3. Change to CallerRunPolicy</h3><h4 id="3-1-Source-code-branch"><a href="#3-1-Source-code-branch" class="headerlink" title="3.1 Source code branch"></a>3.1 Source code branch</h4><p><a target="_blank" rel="noopener" href="https://github.com/Solodye/spring-batch/tree/test/v5.1.0/deadlock-when-spring-batch-submit-more-task-than-core-pool-size">test/v5.1.0/deadlock-when-spring-batch-submit-more-task-than-core-pool-size</a>.</p>
+<h4 id="3-2-Source-code-change"><a href="#3-2-Source-code-change" class="headerlink" title="3.2 Source code change"></a>3.2 Source code change</h4><p>One line change </p>
+<h2 id="Important-conceptions-TBD"><a href="#Important-conceptions-TBD" class="headerlink" title="Important conceptions (TBD)"></a>Important conceptions (TBD)</h2><h3 id="RepeatOperator"><a href="#RepeatOperator" class="headerlink" title="RepeatOperator"></a>RepeatOperator</h3><h3 id="Internal-queue-for-storaging-the-result"><a href="#Internal-queue-for-storaging-the-result" class="headerlink" title="Internal queue for storaging the result"></a>Internal queue for storaging the result</h3><h3 id="How-a-Reader-Processor-Writer-to-be-wrapped-into-the-RepearOperator"><a href="#How-a-Reader-Processor-Writer-to-be-wrapped-into-the-RepearOperator" class="headerlink" title="How a Reader - Processor - Writer to be wrapped into the RepearOperator"></a>How a Reader - Processor - Writer to be wrapped into the RepearOperator</h3><h2 id="Overall-task-submittion-TBD"><a href="#Overall-task-submittion-TBD" class="headerlink" title="Overall task submittion (TBD)"></a>Overall task submittion (TBD)</h2>
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/07/06/Spark-2-3-Spark-Left-Outer-SortMergeJoin-time-complexity-analyzation/" rel="prev" title="<Spark 2.3> Spark Left Outer SortMergeJoin time complexity analyzation">
+                  <i class="fa fa-angle-left"></i> <Spark 2.3> Spark Left Outer SortMergeJoin time complexity analyzation
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder"></span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
