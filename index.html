@@ -136,12 +136,16 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
         <a href="/archives/">
-          <span class="site-state-item-count">10</span>
+          <span class="site-state-item-count">11</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
       <div class="site-state-item site-state-tags">
-        <span class="site-state-item-count">4</span>
+        <span class="site-state-item-count">8</span>
         <span class="site-state-item-name">tags</span>
       </div>
   </nav>
@@ -158,6 +162,314 @@
     </div>
 
     <div class="main-inner index posts-expand">
+
+    
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content=" | YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          <a href="/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/" class="post-title-link" itemprop="url">Solving Spark Shuffling Issue: How 10 GB Off-Heap Memory Saved Our Sorting Job</a>
+        </h2>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+      
+
+      <time title="Created: 2025-09-13 15:45:00 / Modified: 17:22:12" itemprop="dateCreated datePublished" datetime="2025-09-13T15:45:00+08:00">2025-09-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Spark/" itemprop="url" rel="index"><span itemprop="name">Spark</span></a>
+        </span>
+          , 
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Spark/Performance-Tuning/" itemprop="url" rel="index"><span itemprop="name">Performance Tuning</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+          <h2 id="The-Problem-A-288M-Record-Sorting-Job-That-Kept-Failing"><a href="#The-Problem-A-288M-Record-Sorting-Job-That-Kept-Failing" class="headerlink" title="The Problem: A 288M Record Sorting Job That Kept Failing"></a>The Problem: A 288M Record Sorting Job That Kept Failing</h2><p>One of the data export job processes nearly 300 million e-commerce records daily, ranking them by 30-day sales (GMS) and 60-day clicks to export the top items. After months of stable operation, the job started failing consistently with a cryptic shuffle-related error.</p>
+<p>The job would run for nearly 3 hours before crashing.</p>
+<h2 id="Understanding-the-Job-Logic"><a href="#Understanding-the-Job-Logic" class="headerlink" title="Understanding the Job Logic"></a>Understanding the Job Logic</h2><p>Here’s the core Scala code that was causing the problem:</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> sideDf = transformedData</span><br><span class="line">  .select(sortingKeys.head, sortingKeys.tail: _*)</span><br><span class="line">  .withColumn(<span class="type">IchibaYahooExportData</span>.<span class="type">Intermediate</span>.<span class="type">SORTING_ROW_NUMBER</span>,</span><br><span class="line">    row_number().over(<span class="type">Window</span>.orderBy(sortingKeys.map(col(_).desc): _*)))</span><br><span class="line">  .filter(col(<span class="type">IchibaYahooExportData</span>.<span class="type">Intermediate</span>.<span class="type">SORTING_ROW_NUMBER</span>) &lt;= settings.feed.maxOutputCnt)</span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> sortedLimitedResult = transformedData</span><br><span class="line">  .join(sideDf, <span class="type">Seq</span>(<span class="type">IchibaYahooTransformData</span>.<span class="type">Fields</span>.<span class="type">SKU</span>))</span><br></pre></td></tr></table></figure>
+
+<p>The sorting keys were:</p>
+<ul>
+<li><code>ITEM_GMS_30D</code> (30-day Gross Merchandise Sales)</li>
+<li><code>ITEM_CLICK_60D</code> (60-day click count)</li>
+<li><code>SKU</code> (as tie-breaker for sorting based on char order)</li>
+</ul>
+<p><strong>The scale</strong>: Starting with 288,689,929 total items, filtering down to 178,003,986 valid items, then globally sorting.</p>
+<h2 id="The-Root-Cause-Memory-Fragmentation-and-Sorter-Degradation"><a href="#The-Root-Cause-Memory-Fragmentation-and-Sorter-Degradation" class="headerlink" title="The Root Cause: Memory Fragmentation and Sorter Degradation"></a>The Root Cause: Memory Fragmentation and Sorter Degradation</h2><p>The logs reveal a fascinating progression showing how memory pressure caused Spark’s sorting mechanisms to degrade catastrophically. Let’s trace through the failure timeline:</p>
+<p>Driver log: </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">13-09-2025 10:58:50 JST feed_export INFO - 2025-09-13 10:58:50 JST INFO com.hadoop.compression.lzo.LzoCodec: Successfully loaded &amp; initialized native-lzo library [hadoop-lzo rev bb4f4d562ec4888b1c6b0dec1ed7bc4b60229496]</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 2025-09-13 11:40:51 JST WARN org.apache.spark.scheduler.TaskSetManager: Lost task 0.0 in stage 2.0 (TID 3200, hdp-dn6182.haas.jpw1a.dcnw.rakuten, executor 33): java.io.FileNotFoundException: /hadoop/ssd01/yarn/local/usercache/dsyncuser/appcache/application_1753406271096_1650221/blockmgr-2ca77cee-ee18-490a-a4fa-dfcdbc317b6d/3d/temp_shuffle_b93c7006-dcc8-43fd-b9b3-d3893b1e40b8 (Too many open files)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.io.FileInputStream.open0(Native Method)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.io.FileInputStream.open(FileInputStream.java:195)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.io.FileInputStream.&lt;init&gt;(FileInputStream.java:138)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpillsWithTransferTo(UnsafeShuffleWriter.java:445)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpills(UnsafeShuffleWriter.java:318)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.closeAndWriteOutput(UnsafeShuffleWriter.java:237)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.write(UnsafeShuffleWriter.java:190)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:96)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:53)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.scheduler.Task.run(Task.scala:109)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:345)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.lang.Thread.run(Thread.java:748)</span><br></pre></td></tr></table></figure>
+
+<p>Executor log:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">25/09/13 03:58:38 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 4.1 GB to disk (2  times so far)</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 7.113155 ms</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 4.209858 ms</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 3.891692 ms</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 5.282273 ms</span><br><span class="line">25/09/13 04:01:04 INFO ExternalAppendOnlyUnsafeRowArray: Reached spill threshold of 4096 rows, switching to org.apache.spark.util.collection.unsafe.sort.UnsafeExternalSorter</span><br><span class="line">25/09/13 04:01:38 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 4.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 04:02:11 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 3.9 GB to disk (1  time so far)</span><br><span class="line">25/09/13 04:02:44 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 3.9 GB to disk (2  times so far)</span><br><span class="line">25/09/13 04:03:11 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (0  time so far)</span><br><span class="line">25/09/13 04:03:12 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (1  time so far)</span><br><span class="line">25/09/13 04:03:12 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (2  times so far)</span><br><span class="line">...</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86906  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86907  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86908  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86909  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86910  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86911  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86912  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86913  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86914  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86915  times so far)</span><br><span class="line">25/09/13 04:56:02 ERROR Executor: Exception in task 0.3 in stage 2.0 (TID 3203)</span><br><span class="line">java.io.FileNotFoundException: **/application_1753406271096_1650221/blockmgr-f4ac2ecf-3835-412e-96cb-ea91f2be1f0b/16/temp_shuffle_b75d51ec-dd50-4683-86e8-8bcc0a6a2aa6 (Too many open files)</span><br><span class="line">	at java.io.FileInputStream.open0(Native Method)</span><br><span class="line">	at java.io.FileInputStream.open(FileInputStream.java:195)</span><br><span class="line">	at java.io.FileInputStream.&lt;init&gt;(FileInputStream.java:138)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpillsWithTransferTo(UnsafeShuffleWriter.java:445)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpills(UnsafeShuffleWriter.java:318)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.closeAndWriteOutput(UnsafeShuffleWriter.java:237)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.write(UnsafeShuffleWriter.java:190)</span><br><span class="line">	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:96)</span><br><span class="line">	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:53)</span><br><span class="line">	at org.apache.spark.scheduler.Task.run(Task.scala:109)</span><br><span class="line">	at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:345)</span><br><span class="line">	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)</span><br><span class="line">	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)</span><br><span class="line">	at java.lang.Thread.run(Thread.java:748)</span><br><span class="line">25/09/13 04:56:03 INFO CoarseGrainedExecutorBackend: Driver commanded a shutdown</span><br><span class="line">25/09/13 04:56:03 INFO CoarseGrainedExecutorBackend: Driver from brakuda302z.prod.jp.local:41871 disconnected during shutdown</span><br><span class="line">25/09/13 04:56:03 INFO CoarseGrainedExecutorBackend: Driver from brakuda302z.prod.jp.local:41871 disconnected during shutdown</span><br><span class="line">25/09/13 04:56:03 INFO MemoryStore: MemoryStore cleared</span><br><span class="line">25/09/13 04:56:03 INFO BlockManager: BlockManager stopped</span><br><span class="line">25/09/13 04:56:03 INFO ShutdownHookManager: Shutdown hook called</span><br><span class="line">25/09/13 04:56:03 INFO ShutdownHookManager: Deleting directory /hadoop/ssd01/yarn/local/usercache/dsyncuser/appcache/application_1753406271096_1650221/spark-fae09b02-6f5c-4af2-93fa-645e89456f8c</span><br></pre></td></tr></table></figure>
+
+
+<h3 id="Analyzing-the-Failure-Pattern"><a href="#Analyzing-the-Failure-Pattern" class="headerlink" title="Analyzing the Failure Pattern"></a>Analyzing the Failure Pattern</h3><p>Notice the critical transition in the failed run:</p>
+<ol>
+<li><strong>03:58:38 - 04:02:44</strong>: Healthy 4.1GB spills from <code>UnsafeExternalSorter</code> (normal large-scale sorting)</li>
+<li><strong>04:03:11</strong>: Sudden switch to <code>ShuffleExternalSorter</code> with tiny 28MB spills</li>
+<li><strong>04:03:11 - 04:55:59</strong>: Nearly <strong>53 minutes</strong> of continuous tiny spills, creating 86,915+ small files</li>
+<li><strong>04:56:02</strong>: Fatal “Too many open files” error during merge phase</li>
+</ol>
+<p>Compare this to the successful run after optimization:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">25/09/13 06:39:03 INFO UnsafeExternalSorter: Thread 196 spilling sort data of 8.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 5.560492 ms</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 3.916098 ms</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 3.289539 ms</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 3.887022 ms</span><br><span class="line">25/09/13 06:42:49 INFO ExternalAppendOnlyUnsafeRowArray: Reached spill threshold of 4096 rows, switching to org.apache.spark.util.collection.unsafe.sort.UnsafeExternalSorter</span><br><span class="line">25/09/13 06:43:28 INFO UnsafeExternalSorter: Thread 196 spilling sort data of 8.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 06:44:13 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 06:44:34 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (1  time so far)</span><br><span class="line">25/09/13 06:44:55 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (2  times so far)</span><br><span class="line">25/09/13 06:45:13 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (3  times so far)</span><br><span class="line">25/09/13 06:45:29 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (4  times so far)</span><br><span class="line">25/09/13 06:45:46 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (5  times so far)</span><br><span class="line">25/09/13 06:46:01 INFO Executor: Finished task 0.0 in stage 1.1 (TID 3222). 3555 bytes result sent to driver</span><br><span class="line">25/09/13 06:46:02 INFO CoarseGrainedExecutorBackend: Got assigned task 3236</span><br><span class="line">25/09/13 06:46:02 INFO Executor: Running task 13.0 in stage 2.1 (TID 3236)</span><br><span class="line">25/09/13 06:46:02 INFO MapOutputTrackerWorker: Updating epoch to 5 and clearing cache</span><br><span class="line">25/09/13 06:46:02 INFO TorrentBroadcast: Started reading broadcast variable 7</span><br><span class="line">25/09/13 06:46:02 INFO MemoryStore: Block broadcast_7_piece0 stored as bytes in memory (estimated size 9.3 KB, free 12.0 GB)</span><br><span class="line">25/09/13 06:46:02 INFO TorrentBroadcast: Reading broadcast variable 7 took 73 ms</span><br><span class="line">25/09/13 06:46:02 INFO MemoryStore: Block broadcast_7 stored as values in memory (estimated size 23.7 KB, free 12.0 GB)</span><br><span class="line">25/09/13 06:46:02 INFO FileScanRDD: Reading File path: hdfs://***</span><br></pre></td></tr></table></figure>
+
+<h3 id="Success-Pattern-Analysis"><a href="#Success-Pattern-Analysis" class="headerlink" title="Success Pattern Analysis"></a>Success Pattern Analysis</h3><p>The optimized run shows a completely different behavior:</p>
+<ol>
+<li><strong>06:39:03</strong>: Started with even larger 8.1GB spills from <code>UnsafeExternalSorter</code></li>
+<li><strong>06:44:13 - 06:45:46</strong>: Only <strong>6 spills</strong> total of 2.1GB each from <code>ShuffleExternalSorter</code></li>
+<li><strong>06:46:01</strong>: Clean task completion - no file handle exhaustion</li>
+<li><strong>Total spill volume</strong>: ~10.5GB vs 2.4TB in the failed run</li>
+</ol>
+<p><strong>The key insight</strong>: Off-heap memory allowed Spark to maintain larger in-memory buffers, preventing the catastrophic degradation to tiny spill files.</p>
+<p><strong>The problem was clear</strong>: The logs reveal a dramatic memory management breakdown. Initially, the job started with healthy 4.1GB spills from <code>UnsafeExternalSorter</code>, but quickly degraded into <strong>86,915 tiny 28MB spills</strong> from <code>ShuffleExternalSorter</code>. This created nearly <strong>2.4 TB of spill data</strong> (86,915 × 28MB) in small fragments that overwhelmed the file system’s ability to merge them, resulting in the fatal “Too many open files” error.</p>
+<h3 id="Visual-Evidence-Spark-UI-Screenshots"><a href="#Visual-Evidence-Spark-UI-Screenshots" class="headerlink" title="Visual Evidence: Spark UI Screenshots"></a>Visual Evidence: Spark UI Screenshots</h3><p>Let’s look at the actual Spark UI evidence that helped us diagnose the problem:</p>
+<details>
+<summary><strong>Click to expand: Failed Job - Stages Overview</strong></summary>
+
+<img src="/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-stages-summary-failed.png" class="" title="Failed Job Stages">
+
+<p><em>The stages view showing the failed execution with excessive shuffle operations</em></p>
+</details>
+
+<details>
+<summary><strong>Click to expand: Stages Detail</strong></summary>
+
+<img src="/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-stages-failed.png" class="" title="Performance Metrics">
+
+<p><em>Detailed performance metrics showing shuffle read/write statistics and spill behavior</em></p>
+</details>
+
+<details>
+<summary><strong>Click to expand: SQL Execution Plan</strong></summary>
+
+<img src="/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-sql-execution-failed.png" class="" title="SQL Execution Plan">
+
+<p><em>The SQL execution plan showing the Window function that triggered the global sort</em></p>
+</details>
+
+
+<h2 id="Why-Window-Functions-Are-Shuffle-Heavy"><a href="#Why-Window-Functions-Are-Shuffle-Heavy" class="headerlink" title="Why Window Functions Are Shuffle-Heavy"></a>Why Window Functions Are Shuffle-Heavy</h2><p>The <code>Window.orderBy()</code> operation requires a global sort across all data, which triggers Spark’s most expensive operation: a full shuffle. Here’s what happens:</p>
+<ol>
+<li><strong>Partition-local processing</strong>: Each executor processes its data partition</li>
+<li><strong>Global shuffle</strong>: All data must be redistributed to establish global ordering</li>
+<li><strong>Sort and merge</strong>: Executors sort their received data and merge results</li>
+<li><strong>Memory pressure</strong>: Large sorts require substantial memory buffers</li>
+<li><strong>Spill to disk</strong>: When memory is insufficient, data spills to temporary files</li>
+<li><strong>Final merge</strong>: All spill files must be merged for the final result</li>
+</ol>
+<p>With heap memory constraints, step 5 becomes a bottleneck - creating too many small spill files that overwhelm the file system during merge.</p>
+<h2 id="The-Solution-Off-Heap-Memory-Configuration"><a href="#The-Solution-Off-Heap-Memory-Configuration" class="headerlink" title="The Solution: Off-Heap Memory Configuration"></a>The Solution: Off-Heap Memory Configuration</h2><p>We added two simple configuration parameters:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">--conf spark.memory.offHeap.enabled=<span class="literal">true</span></span><br><span class="line">--conf spark.memory.offHeap.size=10G</span><br></pre></td></tr></table></figure>
+
+<p>And reduced executor memory from 8G to 4G to make room for the off-heap allocation.</p>
+<h3 id="Configuration-Comparison"><a href="#Configuration-Comparison" class="headerlink" title="Configuration Comparison"></a>Configuration Comparison</h3><p><strong>Before (Failed Configuration):</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">--executor-memory 8G</span><br><span class="line">--conf spark.executor.memoryOverhead=2048m</span><br><span class="line"><span class="comment"># No off-heap memory configured</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>After (Successful Configuration):</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">--executor-memory 4G</span><br><span class="line">--conf spark.executor.memoryOverhead= <span class="comment"># This need to be more than executor memory + off heap memory</span></span><br><span class="line">--conf spark.memory.offHeap.enabled=<span class="literal">true</span></span><br><span class="line">--conf spark.memory.offHeap.size=10G</span><br></pre></td></tr></table></figure>
+
+<p><strong>Total memory per executor</strong>: Actually <em>increased</em> from ~10GB (8G heap + 2G overhead) to ~16GB (4G heap + 2G overhead + 10G off-heap).</p>
+<h2 id="Results-Dramatic-Performance-Improvement"><a href="#Results-Dramatic-Performance-Improvement" class="headerlink" title="Results: Dramatic Performance Improvement"></a>Results: Dramatic Performance Improvement</h2><p>The results were striking:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Before (Failed)</th>
+<th>After (Success)</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Spill Count</strong></td>
+<td>86,915 spills</td>
+<td>6 spills</td>
+<td>14,486x reduction</td>
+</tr>
+<tr>
+<td><strong>Spill Size per Operation</strong></td>
+<td>28MB per spill</td>
+<td>2.1GB per spill</td>
+<td>75x larger</td>
+</tr>
+<tr>
+<td><strong>Total Spill Volume</strong></td>
+<td>~2.4TB</td>
+<td>~10.5GB</td>
+<td>230x reduction</td>
+</tr>
+<tr>
+<td><strong>Memory Efficiency</strong></td>
+<td>Severe fragmentation</td>
+<td>Healthy large buffers</td>
+<td>Sustained performance</td>
+</tr>
+<tr>
+<td><strong>Job Status</strong></td>
+<td>File handle exhaustion</td>
+<td>Clean completion</td>
+<td>✅</td>
+</tr>
+</tbody></table>
+<h2 id="Why-Off-Heap-Memory-Solved-the-Problem"><a href="#Why-Off-Heap-Memory-Solved-the-Problem" class="headerlink" title="Why Off-Heap Memory Solved the Problem"></a>Why Off-Heap Memory Solved the Problem</h2><p>Off-heap memory provides several advantages for shuffle-intensive operations:</p>
+<h3 id="1-Larger-Buffer-Space"><a href="#1-Larger-Buffer-Space" class="headerlink" title="1. Larger Buffer Space"></a>1. <strong>Larger Buffer Space</strong></h3><ul>
+<li>Off-heap memory isn’t subject to JVM garbage collection pressure</li>
+<li>Allows Spark to buffer more data before spilling to disk</li>
+<li>Reduces the frequency of spill operations</li>
+</ul>
+<h3 id="2-Reduced-GC-Pressure"><a href="#2-Reduced-GC-Pressure" class="headerlink" title="2. Reduced GC Pressure"></a>2. <strong>Reduced GC Pressure</strong></h3><ul>
+<li>Large data structures in heap memory trigger frequent GC pauses</li>
+<li>Off-heap storage reduces GC overhead during intensive operations</li>
+<li>More consistent performance during long-running sorts</li>
+</ul>
+<h2 id="Alternative-Solutions-And-Why-They-Didn’t-Work"><a href="#Alternative-Solutions-And-Why-They-Didn’t-Work" class="headerlink" title="Alternative Solutions (And Why They Didn’t Work)"></a>Alternative Solutions (And Why They Didn’t Work)</h2><h3 id="Option-1-orderBy-limit"><a href="#Option-1-orderBy-limit" class="headerlink" title="Option 1: orderBy().limit()"></a>Option 1: orderBy().limit()</h3><p>We initially tried replacing the Window function with a simpler approach:</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">df.orderBy(sortingKeys.map(col(_).desc): _*).limit(maxOutputCnt)</span><br></pre></td></tr></table></figure>
+
+<p><strong>Why it failed</strong>: In Spark 2.3.2, this approach actually performs worse because it sorts with ALL the columns instead of the more optimized column pruning and join-back strategy.</p>
+<h3 id="Option-2-Memory-Fraction-Tuning"><a href="#Option-2-Memory-Fraction-Tuning" class="headerlink" title="Option 2: Memory Fraction Tuning"></a>Option 2: Memory Fraction Tuning</h3><p>We considered adjusting <code>spark.sql.shuffle.partitions</code> or <code>spark.memory.fraction</code>.</p>
+<p><strong>Why we didn’t pursue it</strong>: The root cause was spill file fragmentation, not total memory availability. Off-heap memory directly addressed the underlying issue.</p>
+<h2 id="Key-Takeaways"><a href="#Key-Takeaways" class="headerlink" title="Key Takeaways"></a>Key Takeaways</h2><ol>
+<li><strong>Monitor spill patterns</strong>: Small, frequent spills (20-50MB) often indicate memory fragmentation issues</li>
+<li><strong>Off-heap memory shines for shuffle operations</strong>: Especially beneficial for global sorts and large window functions</li>
+<li><strong>File handle limits are real</strong>: Too many small spill files can overwhelm the OS file system</li>
+<li><strong>Sometimes less heap is better</strong>: Reducing executor memory to make room for off-heap can improve overall performance</li>
+</ol>
+<h2 id="When-to-Consider-Off-Heap-Memory"><a href="#When-to-Consider-Off-Heap-Memory" class="headerlink" title="When to Consider Off-Heap Memory"></a>When to Consider Off-Heap Memory</h2><p>Off-heap memory is particularly effective for:</p>
+<ul>
+<li><strong>Large window functions</strong> requiring global sorts</li>
+<li><strong>High shuffle volume jobs</strong> with frequent spilling</li>
+<li><strong>Long-running batch jobs</strong> susceptible to GC pressure</li>
+<li><strong>Memory-intensive aggregations</strong> over large datasets</li>
+</ul>
+<h2 id="Conclusion"><a href="#Conclusion" class="headerlink" title="Conclusion"></a>Conclusion</h2><p>By enabling off-heap memory, we gave Spark the breathing room it needed to perform large sorts efficiently, reducing spill operations from 86,915 tiny chunks to just 6 large ones. Sometimes the best optimizations are the simplest ones.</p>
+<!--
+COMPREHENSIVE RESOURCE SUMMARY (Hidden - for future reference before deletion):
+
+=== CONFIGURATION DETAILS ===
+Original Failed Config:
+- 50 executors × 2 cores = 100 total cores
+- 8G executor memory + 2048m overhead = ~10GB per executor
+- 800 shuffle partitions
+- NO off-heap memory
+- YARN queue: common2
+- Spark 2.3.2 (inferred from UnsafeShuffleWriter behavior)
+
+Successful Optimized Config:
+- Same hardware: 50 executors × 2 cores = 100 total cores
+- 4G executor memory + 2048 overhead + 10G off-heap = ~16GB per executor
+- 800 shuffle partitions (unchanged)
+- Off-heap: spark.memory.offHeap.enabled=true, size=10G
+- Total memory INCREASE: 500GB → 800GB cluster-wide
+
+=== DETAILED FAILURE ANALYSIS ===
+Data Volume: 288.7M total → 178M valid items (filtered 110.7M NG items)
+Sorting Keys: ITEM_GMS_30D (Long), ITEM_CLICK_60D (Long), SKU (String)
+Window Function: row_number().over(Window.orderBy(desc)) → requires global sort
+
+Timeline of Failure (Thread 171):
+03:58:38 - 04:02:44: Healthy 4.1GB spills from UnsafeExternalSorter
+04:03:11: CRITICAL SWITCH to ShuffleExternalSorter with 28MB spills
+04:03:11 - 04:55:59: 52 minutes of 86,915+ tiny spills = ~2.4TB fragmented
+04:56:02: Fatal "Too many open files" in UnsafeShuffleWriter.mergeSpills()
+
+Success Pattern (Thread 196):
+06:39:03: Started with 8.1GB spills (even larger than failed case)
+06:44:13 - 06:45:46: Only 6 total spills of 2.1GB each = ~10.5GB
+06:46:01: Clean completion
+
+=== KEY TECHNICAL INSIGHTS ===
+1. UnsafeExternalSorter → ShuffleExternalSorter transition indicates memory pressure
+2. File handle exhaustion at OS level during merge phase (not Spark memory limit)
+3. Off-heap memory prevents GC pressure that causes tiny spill fragmentation
+4. 230x reduction in total spill volume (2.4TB → 10.5GB)
+5. Memory efficiency more important than total memory amount
+
+=== PRODUCTION ENVIRONMENT ===
+- YARN cluster with SSD storage (/hadoop/ssd01/)
+- Custom application: ichiba_yahoo (e-commerce ranking export)
+- JSON-serde processing with Hive metastore integration
+- LZO compression enabled
+- Custom log4j configuration
+
+=== BUSINESS CONTEXT ===
+- Daily Yahoo Shopping data export (top product ranking)
+- Ranking by 30-day GMS + 60-day clicks (critical business metrics)
+- Export limit: 300M items (business requirement)
+- Failure impact: No daily export data for stakeholders
+- Success: 18-minute completion vs 3-hour failure
+
+=== ALTERNATIVE SOLUTIONS ATTEMPTED ===
+1. orderBy().limit(): Worse performance in Spark 2.3.2 (sorts all columns)
+2. Memory fraction tuning: Not attempted (wrong approach for file handle issue)
+3. Partition count adjustment: Not attempted (wouldn't fix spill fragmentation)
+
+=== MONITORING EVIDENCE ===
+- Spark UI stages/jobs showing shuffle read/write volumes
+- SQL execution plan revealing Window function global sort
+- Executor logs with spill progression timestamps
+- Driver logs with file handle exhaustion stack traces
+- Environment settings showing off-heap configuration
+-->
+
+      
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+</div>
+
+
+
 
     
 
@@ -1801,358 +2113,9 @@ columns that the main DataFrame don’t have. This is what clearRedundant will d
 
 
 
-    
-
-
-<div class="post-block">
-  
-  
-
-  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2021/06/02/How%20to%20use%20Window%20in%20Spark/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="YzRuntime's blog">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
-      <meta itemprop="name" content=" | YzRuntime's blog">
-      <meta itemprop="description" content="">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          <a href="/2021/06/02/How%20to%20use%20Window%20in%20Spark/" class="post-title-link" itemprop="url">How to use Window in Spark</a>
-        </h2>
-
-        <div class="post-meta-container">
-          <div class="post-meta">
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar"></i>
-      </span>
-      <span class="post-meta-item-text">Posted on</span>
-
-      <time title="Created: 2021-06-02 18:53:54" itemprop="dateCreated datePublished" datetime="2021-06-02T18:53:54+08:00">2021-06-02</time>
-    </span>
-    <span class="post-meta-item">
-      <span class="post-meta-item-icon">
-        <i class="far fa-calendar-check"></i>
-      </span>
-      <span class="post-meta-item-text">Edited on</span>
-      <time title="Modified: 2025-09-13 15:19:29" itemprop="dateModified" datetime="2025-09-13T15:19:29+08:00">2025-09-13</time>
-    </span>
-
-  
-</div>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-          <h1 id="Background"><a href="#Background" class="headerlink" title="Background"></a>Background</h1><p>When we use groupBy, it generates a <strong>single</strong> value from every group.</p>
-<p>If we not only want to operate on a group of rows but also want our function return a single value for every input row, we should use window function.</p>
-<h1 id="Example-of-last-activity-time"><a href="#Example-of-last-activity-time" class="headerlink" title="Example of last_activity_time"></a>Example of last_activity_time</h1><h2 id="Business-requirement"><a href="#Business-requirement" class="headerlink" title="Business requirement"></a>Business requirement</h2><p>We have a user table with 3 columns. When user click our app, our tracking application will save user’s tracking record. For example: user Tom used its Linux device visited our website at 1st day, then uses ios device visited on 2nd and 3rd days.</p>
-<table>
-<thead>
-<tr>
-<th>user_name</th>
-<th>active_timestamp</th>
-<th>os</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Tom</td>
-<td>1</td>
-<td>linux</td>
-</tr>
-<tr>
-<td>Tom</td>
-<td>2</td>
-<td>ios</td>
-</tr>
-<tr>
-<td>Tom</td>
-<td>3</td>
-<td>ios</td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>3</td>
-<td>windows</td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>4</td>
-<td>ios</td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>5</td>
-<td>ios</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>6</td>
-<td>android</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>7</td>
-<td>ios</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>8</td>
-<td>windows</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>9</td>
-<td>linux</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>10</td>
-<td>macbook</td>
-</tr>
-</tbody></table>
-<p>Our requirement is to calculate the last active timestamp of Tom, Jerry and Speike.</p>
-<h2 id="Implementation"><a href="#Implementation" class="headerlink" title="Implementation"></a>Implementation</h2><h3 id="Prepare-for-data"><a href="#Prepare-for-data" class="headerlink" title="Prepare for data"></a>Prepare for data</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">prepareExampleData</span></span>: <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  <span class="keyword">val</span> columns = <span class="type">Seq</span>(<span class="string">&quot;user_name&quot;</span>, <span class="string">&quot;activity_time&quot;</span>, <span class="string">&quot;os&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> data = <span class="type">Seq</span>(</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>, <span class="number">1</span>, <span class="string">&quot;linux&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>,	<span class="number">2</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Tom&quot;</span>, <span class="number">3</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">3</span>, <span class="string">&quot;windows&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">4</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Speike&quot;</span>, <span class="number">5</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">6</span>, <span class="string">&quot;android&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">7</span>, <span class="string">&quot;ios&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">8</span>, <span class="string">&quot;windows&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">9</span>, <span class="string">&quot;linux&quot;</span>),</span><br><span class="line">    (<span class="string">&quot;Jerry&quot;</span>, <span class="number">10</span>, <span class="string">&quot;macbook&quot;</span>)</span><br><span class="line">  )</span><br><span class="line">  spark.createDataFrame(data).toDF(columns: _*)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="Use-Spark-SQL"><a href="#Use-Spark-SQL" class="headerlink" title="Use Spark SQL"></a>Use Spark SQL</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calculateLastActivitySql</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    df.createTempView(<span class="string">&quot;user_table&quot;</span>)</span><br><span class="line">    df.sqlContext.sql(</span><br><span class="line">      <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">        |select *,</span></span><br><span class="line"><span class="string">        |first(activity_time) over(partition by user_name order by activity_time desc) as last_activity_time</span></span><br><span class="line"><span class="string">        |from user_table&quot;&quot;&quot;</span>.stripMargin</span><br><span class="line">    )</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="Use-Spark-DataFrame-API"><a href="#Use-Spark-DataFrame-API" class="headerlink" title="Use Spark DataFrame API"></a>Use Spark DataFrame API</h3><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calculateLastActivity</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    <span class="keyword">val</span> window = <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>).orderBy(col(<span class="string">&quot;activity_time&quot;</span>).desc)</span><br><span class="line">    df.withColumn(<span class="string">&quot;last_activity_time&quot;</span>, first(<span class="string">&quot;activity_time&quot;</span>).over(window))</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">+---------+-------------+-------+------------------+</span><br><span class="line">|user_name|activity_time|     os|last_activity_time|</span><br><span class="line">+---------+-------------+-------+------------------+</span><br><span class="line">|      Tom|            3|    ios|                 3|</span><br><span class="line">|      Tom|            2|    ios|                 3|</span><br><span class="line">|      Tom|            1|  linux|                 3|</span><br><span class="line">|    Jerry|           10|macbook|                10|</span><br><span class="line">|    Jerry|            9|  linux|                10|</span><br><span class="line">|    Jerry|            8|windows|                10|</span><br><span class="line">|    Jerry|            7|    ios|                10|</span><br><span class="line">|    Jerry|            6|android|                10|</span><br><span class="line">|   Speike|            5|    ios|                 5|</span><br><span class="line">|   Speike|            4|    ios|                 5|</span><br><span class="line">|   Speike|            3|windows|                 5|</span><br><span class="line">+---------+-------------+-------+------------------+</span><br></pre></td></tr></table></figure>
-
-<h1 id="Compare-with-groupBy"><a href="#Compare-with-groupBy" class="headerlink" title="Compare with groupBy"></a>Compare with groupBy</h1><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">compareWithGroupby</span></span>: <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt;</span><br><span class="line">    <span class="keyword">val</span> result = df.groupBy(<span class="string">&quot;user_name&quot;</span>).agg(</span><br><span class="line">      max(<span class="string">&quot;activity_time&quot;</span>).as(<span class="string">&quot;last_activity_time&quot;</span>)</span><br><span class="line">    )</span><br><span class="line">    df.join(result, usingColumn = <span class="string">&quot;user_name&quot;</span>)</span><br><span class="line">      .select(<span class="string">&quot;user_name&quot;</span>, <span class="string">&quot;activity_time&quot;</span>, <span class="string">&quot;os&quot;</span>, <span class="string">&quot;last_activity_time&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">== <span class="type">Physical</span> <span class="type">Plan</span> ==</span><br><span class="line">*(<span class="number">3</span>) <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, last_activity_time#<span class="number">16</span>]</span><br><span class="line">+- *(<span class="number">3</span>) <span class="type">BroadcastHashJoin</span> [user_name#<span class="number">6</span>], [user_name#<span class="number">19</span>], <span class="type">Inner</span>, <span class="type">BuildRight</span></span><br><span class="line">   :- <span class="type">LocalTableScan</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>]</span><br><span class="line">   +- <span class="type">BroadcastExchange</span> <span class="type">HashedRelationBroadcastMode</span>(<span class="type">List</span>(input[<span class="number">0</span>, string, <span class="literal">true</span>]))</span><br><span class="line">      +- *(<span class="number">2</span>) <span class="type">HashAggregate</span>(keys=[user_name#<span class="number">19</span>], functions=[max(activity_time#<span class="number">20</span>)])</span><br><span class="line">         +- <span class="type">Exchange</span> hashpartitioning(user_name#<span class="number">19</span>, <span class="number">200</span>)</span><br><span class="line">            +- *(<span class="number">1</span>) <span class="type">HashAggregate</span>(keys=[user_name#<span class="number">19</span>], functions=[partial_max(activity_time#<span class="number">20</span>)])</span><br><span class="line">               +- <span class="type">LocalTableScan</span> [user_name#<span class="number">19</span>, activity_time#<span class="number">20</span>]</span><br><span class="line">== <span class="type">Physical</span> <span class="type">Plan</span> ==</span><br><span class="line"><span class="type">Window</span> [first(activity_time#<span class="number">7</span>, <span class="literal">false</span>) windowspecdefinition(user_name#<span class="number">6</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>, specifiedwindowframe(<span class="type">RangeFrame</span>, unboundedpreceding$(), currentrow$())) <span class="type">AS</span> last_activity_time#<span class="number">34</span>], [user_name#<span class="number">6</span>], [activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>]</span><br><span class="line">+- *(<span class="number">1</span>) <span class="type">Sort</span> [user_name#<span class="number">6</span> <span class="type">ASC</span> <span class="type">NULLS</span> <span class="type">FIRST</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>], <span class="literal">false</span>, <span class="number">0</span></span><br><span class="line">   +- <span class="type">Exchange</span> hashpartitioning(user_name#<span class="number">6</span>, <span class="number">200</span>)</span><br><span class="line">      +- <span class="type">LocalTableScan</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>]</span><br></pre></td></tr></table></figure>
-
-<h1 id="Conditioned-window-implementation"><a href="#Conditioned-window-implementation" class="headerlink" title="Conditioned window implementation"></a>Conditioned window implementation</h1><p>Now we have another requirement: calculate the last_ios_active_time.</p>
-<p>last_ios_active_time represents the last time that user uses its ios platform.</p>
-<p>For example, Jerry uses ios to login our website at 7th day while he uses Windows device on 8th day. So Jerry’s last_ios_activity_time is 7.</p>
-<table>
-<thead>
-<tr>
-<th>user_name</th>
-<th>active_timestamp</th>
-<th>os</th>
-<th>last_ios_active_time</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Tom</td>
-<td>1</td>
-<td>linux</td>
-<td></td>
-</tr>
-<tr>
-<td>Tom</td>
-<td>2</td>
-<td>ios</td>
-<td></td>
-</tr>
-<tr>
-<td>Tom</td>
-<td>3</td>
-<td>ios</td>
-<td>3</td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>3</td>
-<td>windows</td>
-<td></td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>4</td>
-<td>ios</td>
-<td></td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>5</td>
-<td>ios</td>
-<td>5</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>6</td>
-<td>android</td>
-<td></td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>7</td>
-<td>ios</td>
-<td>7</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>8</td>
-<td>windows</td>
-<td></td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>9</td>
-<td>linux</td>
-<td></td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>10</td>
-<td>macbook</td>
-<td></td>
-</tr>
-</tbody></table>
-<p>If we want to calculate this metric, we should have a window with a condition: only consider the record that  os = “ios”.</p>
-<p>To implement this, we can duplicate a temporary column for window.</p>
-<table>
-<thead>
-<tr>
-<th>user_name</th>
-<th>active_timestamp</th>
-<th>os</th>
-<th>_tmp_window_order_timestamp</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Tom</td>
-<td>1</td>
-<td>linux</td>
-<td>null</td>
-</tr>
-<tr>
-<td>Tom</td>
-<td>2</td>
-<td>ios</td>
-<td>2</td>
-</tr>
-<tr>
-<td>Tom</td>
-<td>3</td>
-<td>ios</td>
-<td>3</td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>3</td>
-<td>windows</td>
-<td>null</td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>4</td>
-<td>ios</td>
-<td>4</td>
-</tr>
-<tr>
-<td>Speike</td>
-<td>5</td>
-<td>ios</td>
-<td>5</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>6</td>
-<td>android</td>
-<td>null</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>7</td>
-<td>ios</td>
-<td>7</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>8</td>
-<td>windows</td>
-<td>null</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>9</td>
-<td>linux</td>
-<td>null</td>
-</tr>
-<tr>
-<td>Jerry</td>
-<td>10</td>
-<td>macbook</td>
-<td>null</td>
-</tr>
-</tbody></table>
-<p>And then set a window order by this temporary timestamp.</p>
-<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">calcLastIosActivityTime</span></span>(tmp_col_name: <span class="type">String</span> = <span class="string">&quot;_tmp_window_order_timestamp&quot;</span>)</span><br><span class="line">                            : <span class="type">DataFrame</span> =&gt; <span class="type">DataFrame</span> = &#123;</span><br><span class="line">  df =&gt; &#123;</span><br><span class="line">    <span class="keyword">val</span> conditionedDf = df.withColumn(tmp_col_name,</span><br><span class="line">      when(col(<span class="string">&quot;os&quot;</span>) === <span class="string">&quot;ios&quot;</span>, col(<span class="string">&quot;activity_time&quot;</span>)).otherwise(<span class="literal">null</span>))</span><br><span class="line">    <span class="keyword">val</span> conditionedWindow =</span><br><span class="line">      <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>).orderBy(col(tmp_col_name).desc)</span><br><span class="line">    conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, first(tmp_col_name).over(conditionedWindow))</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|user_name|activity_time|     os|_tmp_window_order_timestamp|last_ios_active_time|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|      Tom|            3|    ios|                          3|                   3|</span><br><span class="line">|      Tom|            2|    ios|                          2|                   3|</span><br><span class="line">|      Tom|            1|  linux|                       null|                   3|</span><br><span class="line">|    Jerry|            7|    ios|                          7|                   7|</span><br><span class="line">|    Jerry|            6|android|                       null|                   7|</span><br><span class="line">|    Jerry|            8|windows|                       null|                   7|</span><br><span class="line">|    Jerry|            9|  linux|                       null|                   7|</span><br><span class="line">|    Jerry|           10|macbook|                       null|                   7|</span><br><span class="line">|   Speike|            5|    ios|                          5|                   5|</span><br><span class="line">|   Speike|            4|    ios|                          4|                   5|</span><br><span class="line">|   Speike|            3|windows|                       null|                   5|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br></pre></td></tr></table></figure>
-<h1 id="Boundary"><a href="#Boundary" class="headerlink" title="Boundary"></a>Boundary</h1><p>Sometimes we may add some redundant orderBy command. It supports to be no effect. 
-But actually, in some cases, redundant orderBy may lead the unexpected problem.</p>
-<p>Our business requirement is to calculate <code>last_ios_activity_time</code>. We have two methods to calculate this metric.</p>
-<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="function"><span class="keyword">def</span> <span class="title">showWindowBoundary</span> </span>= &#123;</span><br><span class="line">  <span class="keyword">val</span> df = prepareExampleData</span><br><span class="line">  <span class="keyword">val</span> tmp_col_name: <span class="type">String</span> = <span class="string">&quot;_tmp_window_order_timestamp&quot;</span></span><br><span class="line">  <span class="keyword">val</span> conditionedDf = df.withColumn(tmp_col_name,</span><br><span class="line">    when(col(<span class="string">&quot;os&quot;</span>) === <span class="string">&quot;ios&quot;</span>, col(<span class="string">&quot;activity_time&quot;</span>)).otherwise(<span class="literal">null</span>)).cache()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Method 1</span></span><br><span class="line">  println(<span class="string">&quot;Method 1&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> boundaryWindow =</span><br><span class="line">    <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>).orderBy(col(<span class="string">&quot;activity_time&quot;</span>).desc)</span><br><span class="line">  conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(boundaryWindow)).show()</span><br><span class="line"></span><br><span class="line">  <span class="comment">// Method 2</span></span><br><span class="line">  println(<span class="string">&quot;Method 2&quot;</span>)</span><br><span class="line">  <span class="keyword">val</span> userWindow =</span><br><span class="line">    <span class="type">Window</span>.partitionBy(<span class="string">&quot;user_name&quot;</span>)</span><br><span class="line">  conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(userWindow)).show()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>Method 1 has a redundant <code>orderBy(col(&quot;activity_time&quot;).desc)</code> since we finally use <code>max</code> to calculate the metric. While Method 2 doesn’t have any <code>orderBy</code>.</p>
-<p>It seems that the redundant <code>orderBy</code> won’t affect anything. But finally we find it will lead to some record in partition cannot be covered by the Window calculation.</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Method 1</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|user_name|activity_time|     os|_tmp_window_order_timestamp|last_ios_active_time|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|      Tom|            3|    ios|                          3|                   3|</span><br><span class="line">|      Tom|            2|    ios|                          2|                   3|</span><br><span class="line">|      Tom|            1|  linux|                       null|                   3|</span><br><span class="line">|    Jerry|           10|macbook|                       null|                null|</span><br><span class="line">|    Jerry|            9|  linux|                       null|                null|</span><br><span class="line">|    Jerry|            8|windows|                       null|                null|</span><br><span class="line">|    Jerry|            7|    ios|                          7|                   7|</span><br><span class="line">|    Jerry|            6|android|                       null|                   7|</span><br><span class="line">|   Speike|            5|    ios|                          5|                   5|</span><br><span class="line">|   Speike|            4|    ios|                          4|                   5|</span><br><span class="line">|   Speike|            3|windows|                       null|                   5|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br></pre></td></tr></table></figure>
-<p>From the data we can see that Jerry uses his ios on 7th day, which is the latest activity_time. </p>
-<p>If we order all Jerry’s tracking data by activity time descending, there is 3 records before the record that user_name=Jerry and active_timestamp=7. 
-This means if our Window’s spec is from the current row to the first row, the record with activity_time=8 to 10 will not be covered.</p>
-<p>Method 2 calculated normal value.</p>
-<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">Method 2</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|user_name|activity_time|     os|_tmp_window_order_timestamp|last_ios_active_time|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br><span class="line">|      Tom|            1|  linux|                       null|                   3|</span><br><span class="line">|      Tom|            2|    ios|                          2|                   3|</span><br><span class="line">|      Tom|            3|    ios|                          3|                   3|</span><br><span class="line">|    Jerry|            6|android|                       null|                   7|</span><br><span class="line">|    Jerry|            7|    ios|                          7|                   7|</span><br><span class="line">|    Jerry|            8|windows|                       null|                   7|</span><br><span class="line">|    Jerry|            9|  linux|                       null|                   7|</span><br><span class="line">|    Jerry|           10|macbook|                       null|                   7|</span><br><span class="line">|   Speike|            3|windows|                       null|                   5|</span><br><span class="line">|   Speike|            4|    ios|                          4|                   5|</span><br><span class="line">|   Speike|            5|    ios|                          5|                   5|</span><br><span class="line">+---------+-------------+-------+---------------------------+--------------------+</span><br></pre></td></tr></table></figure>
-
-<h2 id="Why-null-still-occurs"><a href="#Why-null-still-occurs" class="headerlink" title="Why null still occurs"></a>Why <code>null</code> still occurs</h2><p>We can see the logical plan. When we use <code>orderBy</code>, the default spec is <code>unboundedpreceding to current row</code>.</p>
-<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(boundaryWindow)).explain(<span class="literal">true</span>)</span><br><span class="line"></span><br><span class="line">== <span class="type">Parsed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line"><span class="symbol">&#x27;Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>, max(<span class="symbol">&#x27;_tmp_window_order_timestamp</span>) windowspecdefinition(<span class="symbol">&#x27;user_name</span>, <span class="symbol">&#x27;activity_time</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>, unspecifiedframe$()) <span class="type">AS</span> last_ios_active_time#<span class="number">291</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">8</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">7</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">22</span>]</span><br><span class="line">   +- <span class="type">Project</span> [_1#<span class="number">0</span> <span class="type">AS</span> user_name#<span class="number">6</span>, _2#<span class="number">1</span> <span class="type">AS</span> activity_time#<span class="number">7</span>, _3#<span class="number">2</span> <span class="type">AS</span> os#<span class="number">8</span>]</span><br><span class="line">      +- <span class="type">LocalRelation</span> [_1#<span class="number">0</span>, _2#<span class="number">1</span>, _3#<span class="number">2</span>]</span><br><span class="line"></span><br><span class="line">== <span class="type">Analyzed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line">user_name: string, activity_time: int, os: string, _tmp_window_order_timestamp: int, last_ios_active_time: int</span><br><span class="line"><span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>, last_ios_active_time#<span class="number">291</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>, last_ios_active_time#<span class="number">291</span>, last_ios_active_time#<span class="number">291</span>]</span><br><span class="line">   +- <span class="type">Window</span> [max(_tmp_window_order_timestamp#<span class="number">22</span>) windowspecdefinition(user_name#<span class="number">6</span>, activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>, specifiedwindowframe(<span class="type">RangeFrame</span>, unboundedpreceding$(), currentrow$())) <span class="type">AS</span> last_ios_active_time#<span class="number">291</span>], [user_name#<span class="number">6</span>], [activity_time#<span class="number">7</span> <span class="type">DESC</span> <span class="type">NULLS</span> <span class="type">LAST</span>]</span><br><span class="line">      +- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, _tmp_window_order_timestamp#<span class="number">22</span>]</span><br><span class="line">         +- <span class="type">Project</span> [user_name#<span class="number">6</span>, activity_time#<span class="number">7</span>, os#<span class="number">8</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">8</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">7</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">22</span>]</span><br><span class="line">            +- <span class="type">Project</span> [_1#<span class="number">0</span> <span class="type">AS</span> user_name#<span class="number">6</span>, _2#<span class="number">1</span> <span class="type">AS</span> activity_time#<span class="number">7</span>, _3#<span class="number">2</span> <span class="type">AS</span> os#<span class="number">8</span>]</span><br><span class="line">               +- <span class="type">LocalRelation</span> [_1#<span class="number">0</span>, _2#<span class="number">1</span>, _3#<span class="number">2</span>]</span><br></pre></td></tr></table></figure>
-
-<p>When we don’t use <code>orderBy</code>, the default spec is <code>unboundedproceding, unboundedfollowing</code>.</p>
-<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line">conditionedDf.withColumn(<span class="string">&quot;last_ios_active_time&quot;</span>, max(tmp_col_name).over(userWindow)).explain</span><br><span class="line"></span><br><span class="line">== <span class="type">Parsed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line"><span class="symbol">&#x27;Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>, max(<span class="symbol">&#x27;_tmp_window_order_timestamp</span>) windowspecdefinition(<span class="symbol">&#x27;user_name</span>, unspecifiedframe$()) <span class="type">AS</span> last_ios_active_time#<span class="number">1383</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">867</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">866</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">871</span>]</span><br><span class="line">   +- <span class="type">Project</span> [_1#<span class="number">859</span> <span class="type">AS</span> user_name#<span class="number">865</span>, _2#<span class="number">860</span> <span class="type">AS</span> activity_time#<span class="number">866</span>, _3#<span class="number">861</span> <span class="type">AS</span> os#<span class="number">867</span>]</span><br><span class="line">      +- <span class="type">LocalRelation</span> [_1#<span class="number">859</span>, _2#<span class="number">860</span>, _3#<span class="number">861</span>]</span><br><span class="line"></span><br><span class="line">== <span class="type">Analyzed</span> <span class="type">Logical</span> <span class="type">Plan</span> ==</span><br><span class="line">user_name: string, activity_time: int, os: string, _tmp_window_order_timestamp: int, last_ios_active_time: int</span><br><span class="line"><span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>, last_ios_active_time#<span class="number">1383</span>]</span><br><span class="line">+- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>, last_ios_active_time#<span class="number">1383</span>, last_ios_active_time#<span class="number">1383</span>]</span><br><span class="line">   +- <span class="type">Window</span> [max(_tmp_window_order_timestamp#<span class="number">871</span>) windowspecdefinition(user_name#<span class="number">865</span>, specifiedwindowframe(<span class="type">RowFrame</span>, unboundedpreceding$(), unboundedfollowing$())) <span class="type">AS</span> last_ios_active_time#<span class="number">1383</span>], [user_name#<span class="number">865</span>]</span><br><span class="line">      +- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, _tmp_window_order_timestamp#<span class="number">871</span>]</span><br><span class="line">         +- <span class="type">Project</span> [user_name#<span class="number">865</span>, activity_time#<span class="number">866</span>, os#<span class="number">867</span>, <span class="type">CASE</span> <span class="type">WHEN</span> (os#<span class="number">867</span> = ios) <span class="type">THEN</span> activity_time#<span class="number">866</span> <span class="type">ELSE</span> cast(<span class="literal">null</span> as int) <span class="type">END</span> <span class="type">AS</span> _tmp_window_order_timestamp#<span class="number">871</span>]</span><br><span class="line">            +- <span class="type">Project</span> [_1#<span class="number">859</span> <span class="type">AS</span> user_name#<span class="number">865</span>, _2#<span class="number">860</span> <span class="type">AS</span> activity_time#<span class="number">866</span>, _3#<span class="number">861</span> <span class="type">AS</span> os#<span class="number">867</span>]</span><br><span class="line">               +- <span class="type">LocalRelation</span> [_1#<span class="number">859</span>, _2#<span class="number">860</span>, _3#<span class="number">861</span>]</span><br><span class="line"></span><br></pre></td></tr></table></figure>
-
-<p>For the record with activity_time=10, its window calculation result is null.</p>
-<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_1.png" class="">
-
-<p>In the second record, its window spec is from current line to the first line.</p>
-<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_2.png" class="">
-
-<p>When it comes to the record with activity_time=7, the window spec includes _tmp_window_order_timestamp=7. So the <code>max()</code> calculation result is 7.</p>
-<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_4.png" class="">
-
-<p>When it comes to the record with activity=6, its windos spec alos includes 7.</p>
-<img src="/2021/06/02/How%20to%20use%20Window%20in%20Spark/window_function_5.png" class="">
-
-
-<h1 id="Reference-docs"><a href="#Reference-docs" class="headerlink" title="Reference docs"></a>Reference docs</h1><p><a target="_blank" rel="noopener" href="https://databricks.com/blog/2015/07/15/introducing-window-functions-in-spark-sql.html">https://databricks.com/blog/2015/07/15/introducing-window-functions-in-spark-sql.html</a></p>
-<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/40048919/what-is-the-difference-between-rowsbetween-and-rangebetween">https://stackoverflow.com/questions/40048919/what-is-the-difference-between-rowsbetween-and-rangebetween</a></p>
-<p><a href="How%20to%20use%20Window%20in%20Spark%20dc83ce2097b54bda8b3bd62feb8805e6/User%20table%206d68e0caa9aa46a0912ee1c6e610e257.csv">User table</a></p>
-<p><a target="_blank" rel="noopener" href="https://stackoverflow.com/questions/30861919/what-is-rows-unbounded-preceding-used-for-in-teradata">Boundary</a></p>
-
-      
-    </div>
-
-    
-    
-    
-
-    <footer class="post-footer">
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-</div>
-
-
-
-
+  <nav class="pagination">
+    <span class="page-number current">1</span><a class="page-number" href="/page/2/">2</a><a class="extend next" rel="next" title="Next page" aria-label="Next page" href="/page/2/"><i class="fa fa-angle-right"></i></a>
+  </nav>
 
 </div>
   </main>
