@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width">
+<meta name="theme-color" content="#222"><meta name="generator" content="Hexo 5.4.2">
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha256-wiz7ZSCn/btzhjKDQBms9Hx4sSeUYsDrTLg7roPstac=" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.1.1/animate.min.css" integrity="sha256-PR7ttpcvz8qrF57fur/yAx1qXMFJeJFiA6pSzWi0OIE=" crossorigin="anonymous">
+
+<script class="next-config" data-name="main" type="application/json">{"hostname":"example.com","root":"/","images":"/images","scheme":"Muse","darkmode":false,"version":"8.19.2","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"style":null,"show_result":false},"fold":{"enable":false,"height":500},"bookmark":{"enable":false,"color":"#222","save":"auto"},"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"stickytabs":false,"motion":{"enable":true,"async":false,"transition":{"menu_item":"fadeInDown","post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"prism":false,"i18n":{"placeholder":"Searching...","empty":"We didn't find any results for the search: ${query}","hits_time":"${hits} results found in ${time} ms","hits":"${hits} results found"}}</script><script src="/js/config.js"></script>
+
+    <meta name="description" content="The Problem: A 288M Record Sorting Job That Kept FailingOne of the data export job processes nearly 300 million e-commerce records daily, ranking them by 30-day sales (GMS) and 60-day clicks to export">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Solving Spark Shuffling Issue: How 10 GB Off-Heap Memory Saved Our Sorting Job">
+<meta property="og:url" content="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/index.html">
+<meta property="og:site_name" content="YzRuntime&#39;s blog">
+<meta property="og:description" content="The Problem: A 288M Record Sorting Job That Kept FailingOne of the data export job processes nearly 300 million e-commerce records daily, ranking them by 30-day sales (GMS) and 60-day clicks to export">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-stages-summary-failed.png">
+<meta property="og:image" content="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-stages-failed.png">
+<meta property="og:image" content="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-sql-execution-failed.png">
+<meta property="article:published_time" content="2025-09-13T07:45:00.000Z">
+<meta property="article:modified_time" content="2025-09-28T09:10:40.385Z">
+<meta property="article:tag" content="Spark">
+<meta property="article:tag" content="Performance">
+<meta property="article:tag" content="Memory Management">
+<meta property="article:tag" content="Shuffling">
+<meta property="article:tag" content="Big Data">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-stages-summary-failed.png">
+
+
+<link rel="canonical" href="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/">
+
+
+
+<script class="next-config" data-name="page" type="application/json">{"sidebar":"","isHome":false,"isPost":true,"lang":"en","comments":true,"permalink":"http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/","path":"2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/","title":"Solving Spark Shuffling Issue: How 10 GB Off-Heap Memory Saved Our Sorting Job"}</script>
+
+<script class="next-config" data-name="calendar" type="application/json">""</script>
+<title>Solving Spark Shuffling Issue: How 10 GB Off-Heap Memory Saved Our Sorting Job | YzRuntime's blog</title>
+  
+
+
+
+
+
+
+
+
+  <noscript>
+    <link rel="stylesheet" href="/css/noscript.css">
+  </noscript>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" class="use-motion">
+  <div class="headband"></div>
+
+  <main class="main">
+    <div class="column">
+      <header class="header" itemscope itemtype="http://schema.org/WPHeader"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar" role="button">
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+        <span class="toggle-line"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <i class="logo-line"></i>
+      <p class="site-title">YzRuntime's blog</p>
+      <i class="logo-line"></i>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger" aria-label="Search" role="button">
+    </div>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  <ul class="main-menu menu"><li class="menu-item menu-item-home"><a href="/" rel="section"><i class="home fa-fw"></i>Home</a></li><li class="menu-item menu-item-archives"><a href="/archives/" rel="section"><i class="archive fa-fw"></i>Archives</a></li>
+  </ul>
+</nav>
+
+
+
+
+</header>
+        
+  
+  <aside class="sidebar">
+
+    <div class="sidebar-inner sidebar-nav-active sidebar-toc-active">
+      <ul class="sidebar-nav">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <div class="sidebar-panel-container">
+        <!--noindex-->
+        <div class="post-toc-wrap sidebar-panel">
+            <div class="post-toc animated"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#The-Problem-A-288M-Record-Sorting-Job-That-Kept-Failing"><span class="nav-number">1.</span> <span class="nav-text">The Problem: A 288M Record Sorting Job That Kept Failing</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Understanding-the-Job-Logic"><span class="nav-number">2.</span> <span class="nav-text">Understanding the Job Logic</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#The-Root-Cause-Memory-Fragmentation-and-Sorter-Degradation"><span class="nav-number">3.</span> <span class="nav-text">The Root Cause: Memory Fragmentation and Sorter Degradation</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Analyzing-the-Failure-Pattern"><span class="nav-number">3.1.</span> <span class="nav-text">Analyzing the Failure Pattern</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Success-Pattern-Analysis"><span class="nav-number">3.2.</span> <span class="nav-text">Success Pattern Analysis</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Visual-Evidence-Spark-UI-Screenshots"><span class="nav-number">3.3.</span> <span class="nav-text">Visual Evidence: Spark UI Screenshots</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Why-Window-Functions-Are-Shuffle-Heavy"><span class="nav-number">4.</span> <span class="nav-text">Why Window Functions Are Shuffle-Heavy</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#The-Solution-Off-Heap-Memory-Configuration"><span class="nav-number">5.</span> <span class="nav-text">The Solution: Off-Heap Memory Configuration</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Configuration-Comparison"><span class="nav-number">5.1.</span> <span class="nav-text">Configuration Comparison</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Results-Dramatic-Performance-Improvement"><span class="nav-number">6.</span> <span class="nav-text">Results: Dramatic Performance Improvement</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Why-Off-Heap-Memory-Solved-the-Problem"><span class="nav-number">7.</span> <span class="nav-text">Why Off-Heap Memory Solved the Problem</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-Larger-Buffer-Space"><span class="nav-number">7.1.</span> <span class="nav-text">1. Larger Buffer Space</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-Reduced-GC-Pressure"><span class="nav-number">7.2.</span> <span class="nav-text">2. Reduced GC Pressure</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Alternative-Solutions-And-Why-They-Didn%E2%80%99t-Work"><span class="nav-number">8.</span> <span class="nav-text">Alternative Solutions (And Why They Didn’t Work)</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Option-1-orderBy-limit"><span class="nav-number">8.1.</span> <span class="nav-text">Option 1: orderBy().limit()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Option-2-Memory-Fraction-Tuning"><span class="nav-number">8.2.</span> <span class="nav-text">Option 2: Memory Fraction Tuning</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Key-Takeaways"><span class="nav-number">9.</span> <span class="nav-text">Key Takeaways</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#When-to-Consider-Off-Heap-Memory"><span class="nav-number">10.</span> <span class="nav-text">When to Consider Off-Heap Memory</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Conclusion"><span class="nav-number">11.</span> <span class="nav-text">Conclusion</span></a></li></ol></div>
+        </div>
+        <!--/noindex-->
+
+        <div class="site-overview-wrap sidebar-panel">
+          <div class="site-author animated" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name"></p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap animated">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+        <a href="/archives/">
+          <span class="site-state-item-count">9</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+        <span class="site-state-item-count">2</span>
+        <span class="site-state-item-name">categories</span>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">tags</span>
+      </div>
+  </nav>
+</div>
+
+        </div>
+      </div>
+    </div>
+
+    
+  </aside>
+
+
+    </div>
+
+    <div class="main-inner post posts-expand">
+
+
+  
+
+
+<div class="post-block">
+  
+  
+
+  <article itemscope itemtype="http://schema.org/Article" class="post-content" lang="en">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="post" itemscope itemtype="http://schema.org/CreativeWork">
+      <meta itemprop="name" content="Solving Spark Shuffling Issue: How 10 GB Off-Heap Memory Saved Our Sorting Job | YzRuntime's blog">
+      <meta itemprop="description" content="">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Solving Spark Shuffling Issue: How 10 GB Off-Heap Memory Saved Our Sorting Job
+        </h1>
+
+        <div class="post-meta-container">
+          <div class="post-meta">
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar"></i>
+      </span>
+      <span class="post-meta-item-text">Posted on</span>
+
+      <time title="Created: 2025-09-13 15:45:00" itemprop="dateCreated datePublished" datetime="2025-09-13T15:45:00+08:00">2025-09-13</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-calendar-check"></i>
+      </span>
+      <span class="post-meta-item-text">Edited on</span>
+      <time title="Modified: 2025-09-28 17:10:40" itemprop="dateModified" datetime="2025-09-28T17:10:40+08:00">2025-09-28</time>
+    </span>
+    <span class="post-meta-item">
+      <span class="post-meta-item-icon">
+        <i class="far fa-folder"></i>
+      </span>
+      <span class="post-meta-item-text">In</span>
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Spark/" itemprop="url" rel="index"><span itemprop="name">Spark</span></a>
+        </span>
+          , 
+        <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+          <a href="/categories/Spark/Performance-Tuning/" itemprop="url" rel="index"><span itemprop="name">Performance Tuning</span></a>
+        </span>
+    </span>
+
+  
+</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody"><h2 id="The-Problem-A-288M-Record-Sorting-Job-That-Kept-Failing"><a href="#The-Problem-A-288M-Record-Sorting-Job-That-Kept-Failing" class="headerlink" title="The Problem: A 288M Record Sorting Job That Kept Failing"></a>The Problem: A 288M Record Sorting Job That Kept Failing</h2><p>One of the data export job processes nearly 300 million e-commerce records daily, ranking them by 30-day sales (GMS) and 60-day clicks to export the top items. After months of stable operation, the job started failing consistently with a cryptic shuffle-related error.</p>
+<p>The job would run for nearly 3 hours before crashing.</p>
+<h2 id="Understanding-the-Job-Logic"><a href="#Understanding-the-Job-Logic" class="headerlink" title="Understanding the Job Logic"></a>Understanding the Job Logic</h2><p>Here’s the core Scala code that was causing the problem:</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> sideDf = transformedData</span><br><span class="line">  .select(sortingKeys.head, sortingKeys.tail: _*)</span><br><span class="line">  .withColumn(<span class="type">IchibaYahooExportData</span>.<span class="type">Intermediate</span>.<span class="type">SORTING_ROW_NUMBER</span>,</span><br><span class="line">    row_number().over(<span class="type">Window</span>.orderBy(sortingKeys.map(col(_).desc): _*)))</span><br><span class="line">  .filter(col(<span class="type">IchibaYahooExportData</span>.<span class="type">Intermediate</span>.<span class="type">SORTING_ROW_NUMBER</span>) &lt;= settings.feed.maxOutputCnt)</span><br><span class="line"></span><br><span class="line"><span class="keyword">val</span> sortedLimitedResult = transformedData</span><br><span class="line">  .join(sideDf, <span class="type">Seq</span>(<span class="type">IchibaYahooTransformData</span>.<span class="type">Fields</span>.<span class="type">SKU</span>))</span><br></pre></td></tr></table></figure>
+
+<p>The sorting keys were:</p>
+<ul>
+<li><code>ITEM_GMS_30D</code> (30-day Gross Merchandise Sales)</li>
+<li><code>ITEM_CLICK_60D</code> (60-day click count)</li>
+<li><code>SKU</code> (as tie-breaker for sorting based on char order)</li>
+</ul>
+<p><strong>The scale</strong>: Starting with 288,689,929 total items, filtering down to 178,003,986 valid items, then globally sorting.</p>
+<h2 id="The-Root-Cause-Memory-Fragmentation-and-Sorter-Degradation"><a href="#The-Root-Cause-Memory-Fragmentation-and-Sorter-Degradation" class="headerlink" title="The Root Cause: Memory Fragmentation and Sorter Degradation"></a>The Root Cause: Memory Fragmentation and Sorter Degradation</h2><p>The logs reveal a fascinating progression showing how memory pressure caused Spark’s sorting mechanisms to degrade catastrophically. Let’s trace through the failure timeline:</p>
+<p>Driver log: </p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">13-09-2025 10:58:50 JST feed_export INFO - 2025-09-13 10:58:50 JST INFO com.hadoop.compression.lzo.LzoCodec: Successfully loaded &amp; initialized native-lzo library [hadoop-lzo rev bb4f4d562ec4888b1c6b0dec1ed7bc4b60229496]</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 2025-09-13 11:40:51 JST WARN org.apache.spark.scheduler.TaskSetManager: Lost task 0.0 in stage 2.0 (TID 3200, hdp-dn6182.haas.jpw1a.dcnw.rakuten, executor 33): java.io.FileNotFoundException: /hadoop/ssd01/yarn/local/usercache/dsyncuser/appcache/application_1753406271096_1650221/blockmgr-2ca77cee-ee18-490a-a4fa-dfcdbc317b6d/3d/temp_shuffle_b93c7006-dcc8-43fd-b9b3-d3893b1e40b8 (Too many open files)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.io.FileInputStream.open0(Native Method)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.io.FileInputStream.open(FileInputStream.java:195)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.io.FileInputStream.&lt;init&gt;(FileInputStream.java:138)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpillsWithTransferTo(UnsafeShuffleWriter.java:445)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpills(UnsafeShuffleWriter.java:318)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.closeAndWriteOutput(UnsafeShuffleWriter.java:237)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.write(UnsafeShuffleWriter.java:190)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:96)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:53)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.scheduler.Task.run(Task.scala:109)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:345)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)</span><br><span class="line">13-09-2025 11:40:51 JST feed_export INFO - 	at java.lang.Thread.run(Thread.java:748)</span><br></pre></td></tr></table></figure>
+
+<p>Executor log:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">25/09/13 03:58:38 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 4.1 GB to disk (2  times so far)</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 7.113155 ms</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 4.209858 ms</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 3.891692 ms</span><br><span class="line">25/09/13 04:01:04 INFO CodeGenerator: Code generated in 5.282273 ms</span><br><span class="line">25/09/13 04:01:04 INFO ExternalAppendOnlyUnsafeRowArray: Reached spill threshold of 4096 rows, switching to org.apache.spark.util.collection.unsafe.sort.UnsafeExternalSorter</span><br><span class="line">25/09/13 04:01:38 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 4.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 04:02:11 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 3.9 GB to disk (1  time so far)</span><br><span class="line">25/09/13 04:02:44 INFO UnsafeExternalSorter: Thread 171 spilling sort data of 3.9 GB to disk (2  times so far)</span><br><span class="line">25/09/13 04:03:11 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (0  time so far)</span><br><span class="line">25/09/13 04:03:12 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (1  time so far)</span><br><span class="line">25/09/13 04:03:12 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (2  times so far)</span><br><span class="line">...</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86906  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86907  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86908  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86909  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86910  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86911  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86912  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86913  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86914  times so far)</span><br><span class="line">25/09/13 04:55:59 INFO ShuffleExternalSorter: Thread 171 spilling sort data of 28.0 MB to disk (86915  times so far)</span><br><span class="line">25/09/13 04:56:02 ERROR Executor: Exception in task 0.3 in stage 2.0 (TID 3203)</span><br><span class="line">java.io.FileNotFoundException: **/application_1753406271096_1650221/blockmgr-f4ac2ecf-3835-412e-96cb-ea91f2be1f0b/16/temp_shuffle_b75d51ec-dd50-4683-86e8-8bcc0a6a2aa6 (Too many open files)</span><br><span class="line">	at java.io.FileInputStream.open0(Native Method)</span><br><span class="line">	at java.io.FileInputStream.open(FileInputStream.java:195)</span><br><span class="line">	at java.io.FileInputStream.&lt;init&gt;(FileInputStream.java:138)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpillsWithTransferTo(UnsafeShuffleWriter.java:445)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.mergeSpills(UnsafeShuffleWriter.java:318)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.closeAndWriteOutput(UnsafeShuffleWriter.java:237)</span><br><span class="line">	at org.apache.spark.shuffle.sort.UnsafeShuffleWriter.write(UnsafeShuffleWriter.java:190)</span><br><span class="line">	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:96)</span><br><span class="line">	at org.apache.spark.scheduler.ShuffleMapTask.runTask(ShuffleMapTask.scala:53)</span><br><span class="line">	at org.apache.spark.scheduler.Task.run(Task.scala:109)</span><br><span class="line">	at org.apache.spark.executor.Executor$TaskRunner.run(Executor.scala:345)</span><br><span class="line">	at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1149)</span><br><span class="line">	at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:624)</span><br><span class="line">	at java.lang.Thread.run(Thread.java:748)</span><br><span class="line">25/09/13 04:56:03 INFO CoarseGrainedExecutorBackend: Driver commanded a shutdown</span><br><span class="line">25/09/13 04:56:03 INFO CoarseGrainedExecutorBackend: Driver from brakuda302z.prod.jp.local:41871 disconnected during shutdown</span><br><span class="line">25/09/13 04:56:03 INFO CoarseGrainedExecutorBackend: Driver from brakuda302z.prod.jp.local:41871 disconnected during shutdown</span><br><span class="line">25/09/13 04:56:03 INFO MemoryStore: MemoryStore cleared</span><br><span class="line">25/09/13 04:56:03 INFO BlockManager: BlockManager stopped</span><br><span class="line">25/09/13 04:56:03 INFO ShutdownHookManager: Shutdown hook called</span><br><span class="line">25/09/13 04:56:03 INFO ShutdownHookManager: Deleting directory /hadoop/ssd01/yarn/local/usercache/dsyncuser/appcache/application_1753406271096_1650221/spark-fae09b02-6f5c-4af2-93fa-645e89456f8c</span><br></pre></td></tr></table></figure>
+
+
+<h3 id="Analyzing-the-Failure-Pattern"><a href="#Analyzing-the-Failure-Pattern" class="headerlink" title="Analyzing the Failure Pattern"></a>Analyzing the Failure Pattern</h3><p>Notice the critical transition in the failed run:</p>
+<ol>
+<li><strong>03:58:38 - 04:02:44</strong>: Healthy 4.1GB spills from <code>UnsafeExternalSorter</code> (normal large-scale sorting)</li>
+<li><strong>04:03:11</strong>: Sudden switch to <code>ShuffleExternalSorter</code> with tiny 28MB spills</li>
+<li><strong>04:03:11 - 04:55:59</strong>: Nearly <strong>53 minutes</strong> of continuous tiny spills, creating 86,915+ small files</li>
+<li><strong>04:56:02</strong>: Fatal “Too many open files” error during merge phase</li>
+</ol>
+<p>Compare this to the successful run after optimization:</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">25/09/13 06:39:03 INFO UnsafeExternalSorter: Thread 196 spilling sort data of 8.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 5.560492 ms</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 3.916098 ms</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 3.289539 ms</span><br><span class="line">25/09/13 06:42:49 INFO CodeGenerator: Code generated in 3.887022 ms</span><br><span class="line">25/09/13 06:42:49 INFO ExternalAppendOnlyUnsafeRowArray: Reached spill threshold of 4096 rows, switching to org.apache.spark.util.collection.unsafe.sort.UnsafeExternalSorter</span><br><span class="line">25/09/13 06:43:28 INFO UnsafeExternalSorter: Thread 196 spilling sort data of 8.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 06:44:13 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (0  time so far)</span><br><span class="line">25/09/13 06:44:34 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (1  time so far)</span><br><span class="line">25/09/13 06:44:55 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (2  times so far)</span><br><span class="line">25/09/13 06:45:13 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (3  times so far)</span><br><span class="line">25/09/13 06:45:29 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (4  times so far)</span><br><span class="line">25/09/13 06:45:46 INFO ShuffleExternalSorter: Thread 196 spilling sort data of 2.1 GB to disk (5  times so far)</span><br><span class="line">25/09/13 06:46:01 INFO Executor: Finished task 0.0 in stage 1.1 (TID 3222). 3555 bytes result sent to driver</span><br><span class="line">25/09/13 06:46:02 INFO CoarseGrainedExecutorBackend: Got assigned task 3236</span><br><span class="line">25/09/13 06:46:02 INFO Executor: Running task 13.0 in stage 2.1 (TID 3236)</span><br><span class="line">25/09/13 06:46:02 INFO MapOutputTrackerWorker: Updating epoch to 5 and clearing cache</span><br><span class="line">25/09/13 06:46:02 INFO TorrentBroadcast: Started reading broadcast variable 7</span><br><span class="line">25/09/13 06:46:02 INFO MemoryStore: Block broadcast_7_piece0 stored as bytes in memory (estimated size 9.3 KB, free 12.0 GB)</span><br><span class="line">25/09/13 06:46:02 INFO TorrentBroadcast: Reading broadcast variable 7 took 73 ms</span><br><span class="line">25/09/13 06:46:02 INFO MemoryStore: Block broadcast_7 stored as values in memory (estimated size 23.7 KB, free 12.0 GB)</span><br><span class="line">25/09/13 06:46:02 INFO FileScanRDD: Reading File path: hdfs://***</span><br></pre></td></tr></table></figure>
+
+<h3 id="Success-Pattern-Analysis"><a href="#Success-Pattern-Analysis" class="headerlink" title="Success Pattern Analysis"></a>Success Pattern Analysis</h3><p>The optimized run shows a completely different behavior:</p>
+<ol>
+<li><strong>06:39:03</strong>: Started with even larger 8.1GB spills from <code>UnsafeExternalSorter</code></li>
+<li><strong>06:44:13 - 06:45:46</strong>: Only <strong>6 spills</strong> total of 2.1GB each from <code>ShuffleExternalSorter</code></li>
+<li><strong>06:46:01</strong>: Clean task completion - no file handle exhaustion</li>
+<li><strong>Total spill volume</strong>: ~10.5GB vs 2.4TB in the failed run</li>
+</ol>
+<p><strong>The key insight</strong>: Off-heap memory allowed Spark to maintain larger in-memory buffers, preventing the catastrophic degradation to tiny spill files.</p>
+<p><strong>The problem was clear</strong>: The logs reveal a dramatic memory management breakdown. Initially, the job started with healthy 4.1GB spills from <code>UnsafeExternalSorter</code>, but quickly degraded into <strong>86,915 tiny 28MB spills</strong> from <code>ShuffleExternalSorter</code>. This created nearly <strong>2.4 TB of spill data</strong> (86,915 × 28MB) in small fragments that overwhelmed the file system’s ability to merge them, resulting in the fatal “Too many open files” error.</p>
+<h3 id="Visual-Evidence-Spark-UI-Screenshots"><a href="#Visual-Evidence-Spark-UI-Screenshots" class="headerlink" title="Visual Evidence: Spark UI Screenshots"></a>Visual Evidence: Spark UI Screenshots</h3><p>Let’s look at the actual Spark UI evidence that helped us diagnose the problem:</p>
+<details>
+<summary><strong>Click to expand: Failed Job - Stages Overview</strong></summary>
+
+<img src="/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-stages-summary-failed.png" class="" title="Failed Job Stages">
+
+<p><em>The stages view showing the failed execution with excessive shuffle operations</em></p>
+</details>
+
+<details>
+<summary><strong>Click to expand: Stages Detail</strong></summary>
+
+<img src="/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-stages-failed.png" class="" title="Performance Metrics">
+
+<p><em>Detailed performance metrics showing shuffle read/write statistics and spill behavior</em></p>
+</details>
+
+<details>
+<summary><strong>Click to expand: SQL Execution Plan</strong></summary>
+
+<img src="/2025/09/13/Solving-Spark-Shuffling-Issue-How-10-GB-Off-Heap-Memory-Saved-Our-Sorting-Job/spark-ui-sql-execution-failed.png" class="" title="SQL Execution Plan">
+
+<p><em>The SQL execution plan showing the Window function that triggered the global sort</em></p>
+</details>
+
+
+<h2 id="Why-Window-Functions-Are-Shuffle-Heavy"><a href="#Why-Window-Functions-Are-Shuffle-Heavy" class="headerlink" title="Why Window Functions Are Shuffle-Heavy"></a>Why Window Functions Are Shuffle-Heavy</h2><p>The <code>Window.orderBy()</code> operation requires a global sort across all data, which triggers Spark’s most expensive operation: a full shuffle. Here’s what happens:</p>
+<ol>
+<li><strong>Partition-local processing</strong>: Each executor processes its data partition</li>
+<li><strong>Global shuffle</strong>: All data must be redistributed to establish global ordering</li>
+<li><strong>Sort and merge</strong>: Executors sort their received data and merge results</li>
+<li><strong>Memory pressure</strong>: Large sorts require substantial memory buffers</li>
+<li><strong>Spill to disk</strong>: When memory is insufficient, data spills to temporary files</li>
+<li><strong>Final merge</strong>: All spill files must be merged for the final result</li>
+</ol>
+<p>With heap memory constraints, step 5 becomes a bottleneck - creating too many small spill files that overwhelm the file system during merge.</p>
+<h2 id="The-Solution-Off-Heap-Memory-Configuration"><a href="#The-Solution-Off-Heap-Memory-Configuration" class="headerlink" title="The Solution: Off-Heap Memory Configuration"></a>The Solution: Off-Heap Memory Configuration</h2><p>We added two simple configuration parameters:</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">--conf spark.memory.offHeap.enabled=<span class="literal">true</span></span><br><span class="line">--conf spark.memory.offHeap.size=10G</span><br></pre></td></tr></table></figure>
+
+<p>And reduced executor memory from 8G to 4G to make room for the off-heap allocation.</p>
+<h3 id="Configuration-Comparison"><a href="#Configuration-Comparison" class="headerlink" title="Configuration Comparison"></a>Configuration Comparison</h3><p><strong>Before (Failed Configuration):</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">--executor-memory 8G</span><br><span class="line">--conf spark.executor.memoryOverhead=2048m</span><br><span class="line"><span class="comment"># No off-heap memory configured</span></span><br></pre></td></tr></table></figure>
+
+<p><strong>After (Successful Configuration):</strong></p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">--executor-memory 4G</span><br><span class="line">--conf spark.executor.memoryOverhead= <span class="comment"># This need to be more than executor memory + off heap memory</span></span><br><span class="line">--conf spark.memory.offHeap.enabled=<span class="literal">true</span></span><br><span class="line">--conf spark.memory.offHeap.size=10G</span><br></pre></td></tr></table></figure>
+
+<p><strong>Total memory per executor</strong>: Actually <em>increased</em> from ~10GB (8G heap + 2G overhead) to ~16GB (4G heap + 2G overhead + 10G off-heap).</p>
+<h2 id="Results-Dramatic-Performance-Improvement"><a href="#Results-Dramatic-Performance-Improvement" class="headerlink" title="Results: Dramatic Performance Improvement"></a>Results: Dramatic Performance Improvement</h2><p>The results were striking:</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Before (Failed)</th>
+<th>After (Success)</th>
+<th>Improvement</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Spill Count</strong></td>
+<td>86,915 spills</td>
+<td>6 spills</td>
+<td>14,486x reduction</td>
+</tr>
+<tr>
+<td><strong>Spill Size per Operation</strong></td>
+<td>28MB per spill</td>
+<td>2.1GB per spill</td>
+<td>75x larger</td>
+</tr>
+<tr>
+<td><strong>Total Spill Volume</strong></td>
+<td>~2.4TB</td>
+<td>~10.5GB</td>
+<td>230x reduction</td>
+</tr>
+<tr>
+<td><strong>Memory Efficiency</strong></td>
+<td>Severe fragmentation</td>
+<td>Healthy large buffers</td>
+<td>Sustained performance</td>
+</tr>
+<tr>
+<td><strong>Job Status</strong></td>
+<td>File handle exhaustion</td>
+<td>Clean completion</td>
+<td>✅</td>
+</tr>
+</tbody></table>
+<h2 id="Why-Off-Heap-Memory-Solved-the-Problem"><a href="#Why-Off-Heap-Memory-Solved-the-Problem" class="headerlink" title="Why Off-Heap Memory Solved the Problem"></a>Why Off-Heap Memory Solved the Problem</h2><p>Off-heap memory provides several advantages for shuffle-intensive operations:</p>
+<h3 id="1-Larger-Buffer-Space"><a href="#1-Larger-Buffer-Space" class="headerlink" title="1. Larger Buffer Space"></a>1. <strong>Larger Buffer Space</strong></h3><ul>
+<li>Off-heap memory isn’t subject to JVM garbage collection pressure</li>
+<li>Allows Spark to buffer more data before spilling to disk</li>
+<li>Reduces the frequency of spill operations</li>
+</ul>
+<h3 id="2-Reduced-GC-Pressure"><a href="#2-Reduced-GC-Pressure" class="headerlink" title="2. Reduced GC Pressure"></a>2. <strong>Reduced GC Pressure</strong></h3><ul>
+<li>Large data structures in heap memory trigger frequent GC pauses</li>
+<li>Off-heap storage reduces GC overhead during intensive operations</li>
+<li>More consistent performance during long-running sorts</li>
+</ul>
+<h2 id="Alternative-Solutions-And-Why-They-Didn’t-Work"><a href="#Alternative-Solutions-And-Why-They-Didn’t-Work" class="headerlink" title="Alternative Solutions (And Why They Didn’t Work)"></a>Alternative Solutions (And Why They Didn’t Work)</h2><h3 id="Option-1-orderBy-limit"><a href="#Option-1-orderBy-limit" class="headerlink" title="Option 1: orderBy().limit()"></a>Option 1: orderBy().limit()</h3><p>We initially tried replacing the Window function with a simpler approach:</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">df.orderBy(sortingKeys.map(col(_).desc): _*).limit(maxOutputCnt)</span><br></pre></td></tr></table></figure>
+
+<p><strong>Why it failed</strong>: In Spark 2.3.2, this approach actually performs worse because it sorts with ALL the columns instead of the more optimized column pruning and join-back strategy.</p>
+<h3 id="Option-2-Memory-Fraction-Tuning"><a href="#Option-2-Memory-Fraction-Tuning" class="headerlink" title="Option 2: Memory Fraction Tuning"></a>Option 2: Memory Fraction Tuning</h3><p>We considered adjusting <code>spark.sql.shuffle.partitions</code> or <code>spark.memory.fraction</code>.</p>
+<p><strong>Why we didn’t pursue it</strong>: The root cause was spill file fragmentation, not total memory availability. Off-heap memory directly addressed the underlying issue.</p>
+<h2 id="Key-Takeaways"><a href="#Key-Takeaways" class="headerlink" title="Key Takeaways"></a>Key Takeaways</h2><ol>
+<li><strong>Monitor spill patterns</strong>: Small, frequent spills (20-50MB) often indicate memory fragmentation issues</li>
+<li><strong>Off-heap memory shines for shuffle operations</strong>: Especially beneficial for global sorts and large window functions</li>
+<li><strong>File handle limits are real</strong>: Too many small spill files can overwhelm the OS file system</li>
+<li><strong>Sometimes less heap is better</strong>: Reducing executor memory to make room for off-heap can improve overall performance</li>
+</ol>
+<h2 id="When-to-Consider-Off-Heap-Memory"><a href="#When-to-Consider-Off-Heap-Memory" class="headerlink" title="When to Consider Off-Heap Memory"></a>When to Consider Off-Heap Memory</h2><p>Off-heap memory is particularly effective for:</p>
+<ul>
+<li><strong>Large window functions</strong> requiring global sorts</li>
+<li><strong>High shuffle volume jobs</strong> with frequent spilling</li>
+<li><strong>Long-running batch jobs</strong> susceptible to GC pressure</li>
+<li><strong>Memory-intensive aggregations</strong> over large datasets</li>
+</ul>
+<h2 id="Conclusion"><a href="#Conclusion" class="headerlink" title="Conclusion"></a>Conclusion</h2><p>By enabling off-heap memory, we gave Spark the breathing room it needed to perform large sorts efficiently, reducing spill operations from 86,915 tiny chunks to just 6 large ones. Sometimes the best optimizations are the simplest ones.</p>
+<!--
+COMPREHENSIVE RESOURCE SUMMARY (Hidden - for future reference before deletion):
+
+=== CONFIGURATION DETAILS ===
+Original Failed Config:
+- 50 executors × 2 cores = 100 total cores
+- 8G executor memory + 2048m overhead = ~10GB per executor
+- 800 shuffle partitions
+- NO off-heap memory
+- YARN queue: common2
+- Spark 2.3.2 (inferred from UnsafeShuffleWriter behavior)
+
+Successful Optimized Config:
+- Same hardware: 50 executors × 2 cores = 100 total cores
+- 4G executor memory + 2048 overhead + 10G off-heap = ~16GB per executor
+- 800 shuffle partitions (unchanged)
+- Off-heap: spark.memory.offHeap.enabled=true, size=10G
+- Total memory INCREASE: 500GB → 800GB cluster-wide
+
+=== DETAILED FAILURE ANALYSIS ===
+Data Volume: 288.7M total → 178M valid items (filtered 110.7M NG items)
+Sorting Keys: ITEM_GMS_30D (Long), ITEM_CLICK_60D (Long), SKU (String)
+Window Function: row_number().over(Window.orderBy(desc)) → requires global sort
+
+Timeline of Failure (Thread 171):
+03:58:38 - 04:02:44: Healthy 4.1GB spills from UnsafeExternalSorter
+04:03:11: CRITICAL SWITCH to ShuffleExternalSorter with 28MB spills
+04:03:11 - 04:55:59: 52 minutes of 86,915+ tiny spills = ~2.4TB fragmented
+04:56:02: Fatal "Too many open files" in UnsafeShuffleWriter.mergeSpills()
+
+Success Pattern (Thread 196):
+06:39:03: Started with 8.1GB spills (even larger than failed case)
+06:44:13 - 06:45:46: Only 6 total spills of 2.1GB each = ~10.5GB
+06:46:01: Clean completion
+
+=== KEY TECHNICAL INSIGHTS ===
+1. UnsafeExternalSorter → ShuffleExternalSorter transition indicates memory pressure
+2. File handle exhaustion at OS level during merge phase (not Spark memory limit)
+3. Off-heap memory prevents GC pressure that causes tiny spill fragmentation
+4. 230x reduction in total spill volume (2.4TB → 10.5GB)
+5. Memory efficiency more important than total memory amount
+
+=== PRODUCTION ENVIRONMENT ===
+- YARN cluster with SSD storage (/hadoop/ssd01/)
+- Custom application: ichiba_yahoo (e-commerce ranking export)
+- JSON-serde processing with Hive metastore integration
+- LZO compression enabled
+- Custom log4j configuration
+
+=== BUSINESS CONTEXT ===
+- Daily Yahoo Shopping data export (top product ranking)
+- Ranking by 30-day GMS + 60-day clicks (critical business metrics)
+- Export limit: 300M items (business requirement)
+- Failure impact: No daily export data for stakeholders
+- Success: 18-minute completion vs 3-hour failure
+
+=== ALTERNATIVE SOLUTIONS ATTEMPTED ===
+1. orderBy().limit(): Worse performance in Spark 2.3.2 (sorts all columns)
+2. Memory fraction tuning: Not attempted (wrong approach for file handle issue)
+3. Partition count adjustment: Not attempted (wouldn't fix spill fragmentation)
+
+=== MONITORING EVIDENCE ===
+- Spark UI stages/jobs showing shuffle read/write volumes
+- SQL execution plan revealing Window function global sort
+- Executor logs with spill progression timestamps
+- Driver logs with file handle exhaustion stack traces
+- Environment settings showing off-heap configuration
+-->
+
+    </div>
+
+    
+    
+    
+
+    <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Spark/" rel="tag"># Spark</a>
+              <a href="/tags/Performance/" rel="tag"># Performance</a>
+              <a href="/tags/Memory-Management/" rel="tag"># Memory Management</a>
+              <a href="/tags/Shuffling/" rel="tag"># Shuffling</a>
+              <a href="/tags/Big-Data/" rel="tag"># Big Data</a>
+          </div>
+
+        
+
+          <div class="post-nav">
+            <div class="post-nav-item">
+                <a href="/2025/07/06/Spring-Batch-5-1-0-ThottleLimit-Causing-Deadlock-on-ThreadPoolExecutor/" rel="prev" title="Spring Batch 5.1.0 ThottleLimit Causing Deadlock on ThreadPoolExecutor">
+                  <i class="fa fa-angle-left"></i> Spring Batch 5.1.0 ThottleLimit Causing Deadlock on ThreadPoolExecutor
+                </a>
+            </div>
+            <div class="post-nav-item">
+            </div>
+          </div>
+    </footer>
+  </article>
+</div>
+
+
+
+
+
+
+</div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-inner">
+
+  <div class="copyright">
+    &copy; 
+    <span itemprop="copyrightYear">2025</span>
+    <span class="with-love">
+      <i class="user"></i>
+    </span>
+    <span class="author" itemprop="copyrightHolder"></span>
+  </div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.js.org/muse/" rel="noopener" target="_blank">NexT.Muse</a>
+  </div>
+
+    </div>
+  </footer>
+
+  
+  <div class="toggle sidebar-toggle" role="button">
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+    <span class="toggle-line"></span>
+  </div>
+  <div class="sidebar-dimmer"></div>
+  <div class="back-to-top" role="button" aria-label="Back to top">
+    <i class="fa fa-arrow-up fa-lg"></i>
+    <span>0%</span>
+  </div>
+
+<noscript>
+  <div class="noscript-warning">Theme NexT works best with JavaScript enabled</div>
+</noscript>
+
+
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js" integrity="sha256-XL2inqUJaslATFnHdJOi9GfQ60on8Wx1C2H8DYiN1xY=" crossorigin="anonymous"></script>
+<script src="/js/comments.js"></script><script src="/js/utils.js"></script><script src="/js/motion.js"></script><script src="/js/schemes/muse.js"></script><script src="/js/next-boot.js"></script>
+
+  
+
+
+
+
+
+
+  
+
+
+
+
+
+</body>
+</html>
